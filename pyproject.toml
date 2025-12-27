@@ -10,7 +10,12 @@ authors = [{ name = "42kiko" }, { name = "pat-olhed" }, { name = "AgusLuigi" }]
 readme = "README.md"
 requires-python = ">=3.10"
 
-dependencies = ["numpy>=1.26", "pandas>=2.1", "requests>=2.31"]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "requests>=2.31",
+  "pyarrow>=16.0.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest", "black", "ruff", "pre-commit"]
