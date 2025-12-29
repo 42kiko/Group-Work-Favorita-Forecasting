@@ -34,6 +34,7 @@ target-version = ["py310"]
 line-length = 88
 target-version = "py310"
 
+[tool.ruff.lint]
 select = [
   "E", # Style errors
   "F", # Logic errors
@@ -48,5 +49,5 @@ select = [
 ]
 
 ignore = [
-  "E501", # line length (Black regelt das)
+  "E501", # line length (handled by Black)
 ]
