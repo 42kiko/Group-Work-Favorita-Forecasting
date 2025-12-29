@@ -16,7 +16,8 @@ dependencies = [
   "requests>=2.31",
   "pyarrow>=16.0.0",
   "PyYAML>=6.0.1",
-  "plotly>=5.18.0"
+  "plotly>=5.18.0",
+  "plotly-stubs>=0.1.1",
 ]
 
 [project.optional-dependencies]
