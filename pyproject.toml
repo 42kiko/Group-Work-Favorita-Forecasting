@@ -8,7 +8,7 @@ version = "0.0.1"
 description = "Group Working Time Series Analysis for Favorita Stores"
 authors = [{ name = "42kiko" }, { name = "pat-olhed" }, { name = "AgusLuigi" }]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 dependencies = [
   "numpy>=1.26",
