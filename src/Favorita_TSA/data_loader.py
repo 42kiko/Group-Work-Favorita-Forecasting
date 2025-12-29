@@ -2,6 +2,16 @@ from pathlib import Path
 
 import pandas as pd
 
+DATA = {
+    "items": "items.parquet",
+    "oil": "oil.parquet",
+    "holidays_events": "holidays_events.parquet",
+    "stores": "stores.parquet",
+    "test": "test.parquet",
+    "transactions": "transactions.parquet",
+    "train": "train.parquet",
+}
+
 
 def load_train_csv(path: str | Path) -> pd.DataFrame:
     """
@@ -123,17 +133,8 @@ def save_tables_to_parquet() -> None:
     Geht die Liste der Tabellen durch und speichert sie als Parquet-Pakete.
     Train landet in ../data/train/, andere in ../data/name_pkg/.
     """
-    data = {
-        "items",
-        "oil",
-        "holidays_events",
-        "stores",
-        "test",
-        "transactions",
-        "train",
-    }
 
-    for element in data:
+    for element in DATA:
         if element == "train":
             split_parquet_to_packages(
                 load_train_csv(f"data/raw/{element}.csv"),
@@ -146,13 +147,29 @@ def save_tables_to_parquet() -> None:
             )
 
 
-save_tables_to_parquet()
+def parquet_loader(name: str) -> pd.DataFrame:
+    if name not in DATA:
+        raise ValueError(f"{name} ist kein gültiger Datensatz")
+
+    # 🔹 Spezialfall: train besteht aus mehreren Parts
+    if name == "train":
+        base_dir = Path("data/processed") / DATA[name] / "train"
+
+        if not base_dir.exists():
+            raise FileNotFoundError(f"Train-Verzeichnis nicht gefunden: {base_dir}")
+
+        parts = sorted(base_dir.glob("part_*.parquet"))
+
+        if not parts:
+            raise FileNotFoundError(f"Keine Train-Parquet-Parts gefunden in {base_dir}")
+
+        dfs = [pd.read_parquet(p) for p in parts]
+        return pd.concat(dfs, ignore_index=True)
+
+    # 🔹 Standardfall: einzelne Parquet-Datei
+    return pd.read_parquet(Path("data/processed") / DATA[name])
 
 
-# df_to_parquet(load_train_csv("data/raw/train.csv"), "data/processed/train.parquet")
+# return pd.read_parquet(f"data/processed/{name}.parquet")
 
-
-# df_to_parquet(load_df("data/raw/items.csv"), "data/processed/items.parquet")
-
-
-# csv_to_parquet("data/raw/train.csv", "data/processed/train.parquet")
+print(parquet_loader("oil"))
