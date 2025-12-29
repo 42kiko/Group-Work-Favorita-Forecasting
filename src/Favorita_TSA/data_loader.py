@@ -172,4 +172,4 @@ def parquet_loader(name: str) -> pd.DataFrame:
 
 # return pd.read_parquet(f"data/processed/{name}.parquet")
 
-print(parquet_loader("oil"))
+# print(parquet_loader("oil"))
