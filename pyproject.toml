@@ -21,7 +21,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "ruff", "pre-commit"]
+dev = [
+  "pytest",
+  "black",
+  "ruff",
+  "pre-commit",
+  "ipykernel>=6.29",
+  "seaborn>=0.11",
+  "nbformat>=4.2.0",
+  "ydata-profiling",
+  "setuptools",
+]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
