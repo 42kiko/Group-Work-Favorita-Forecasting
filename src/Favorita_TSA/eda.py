@@ -18,7 +18,7 @@ for dataset, dataframe in all_data.items():
     profile = ProfileReport(
         dataframe, title=f"YData Profiling Report - {dataset.value}", explorative=True
     )
-    profile.to_file(f"/reports/{dataset.value}_report.html")
+    profile.to_file(f"./reports/{dataset.value}_report.html")
 
 
 # profile = ProfileReport(df_items, title="YData Profiling Report", explorative=True)
