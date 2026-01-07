@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Favorita TSA – Data Profiling Reports</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            background: #0b0f14;
+            color: #e6edf3;
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 48px 20px;
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 0;
+        }
+
+        p {
+            margin: 0;
+            color: #9fb0c0;
+            line-height: 1.5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        a.card {
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #1c2632;
+            background: #0f1620;
+            border-radius: 14px;
+            padding: 16px;
+            transition: transform 120ms ease, border-color 120ms ease;
+        }
+
+        a.card:hover {
+            transform: translateY(-2px);
+            border-color: #2a3a4c;
+        }
+
+        .title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            font-size: 12px;
+            color: #9fb0c0;
+            border: 1px solid #1c2632;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .hint {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #9fb0c0;
+        }
+
+        footer {
+            margin-top: 28px;
+            font-size: 12px;
+            color: #7f93a7;
+        }
+
+        code {
+            background: #0f1620;
+            border: 1px solid #1c2632;
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <h1>Favorita TSA – Data Profiling Reports</h1>
+            <p>
+                Auto-generated overview page linking to all
+                <code>ydata-profiling</code> HTML reports (one per dataset).
+            </p>
+        </header>
+
+        <div id="cards" class="grid"></div>
+
+        <footer>
+            Expected structure:
+            <code>reports/&lt;dataset&gt;_profile.html</code> (e.g.
+            <code>reports/train_profile.html</code>).
+        </footer>
+    </div>
+
+    <script>
+        // Keep this list in sync with your Python Enum Dataset values.
+        // If you add a new Dataset enum member, add its .value here.
+        const DATASETS = [
+            "oil",
+            "items",
+            "holidays_events",
+            "stores",
+            "transactions",
+            "train",
+            "test",
+        ];
+
+        const cardsEl = document.getElementById("cards");
+
+        DATASETS.forEach((ds) => {
+            const href = `${ds}_report.html`; // place this index.html in the same folder as reports
+            const card = document.createElement("a");
+            card.className = "card";
+            card.href = href;
+            card.target = "_self";
+            card.rel = "noopener";
+
+            const pretty = ds.replaceAll("_", " ");
+
+            card.innerHTML = `
+          <div class="title">
+            <div class="name">${pretty}</div>
+            <div class="badge">HTML report</div>
+          </div>
+          <div class="hint">Open profiling report for <code>${ds}</code></div>
+        `;
+
+            cardsEl.appendChild(card);
+        });
+    </script>
+</body>
+
+</html>
