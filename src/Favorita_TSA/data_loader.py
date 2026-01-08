@@ -175,14 +175,3 @@ def parquet_loader(name: Dataset) -> pd.DataFrame:
 
     # 🔹 Standardfall: einzelne Parquet-Datei
     return pd.read_parquet(Path(f"data/processed/{name.value}.parquet"))
-
-
-# return pd.read_parquet(f"data/processed/{name}.parquet")
-
-# print(parquet_loader("oil"))
-
-
-save_tables_to_parquet()
-
-
-print(parquet_loader(Dataset.TRAIN))
