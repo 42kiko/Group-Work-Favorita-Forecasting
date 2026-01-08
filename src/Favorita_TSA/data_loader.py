@@ -2,15 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-DATA = {
-    "items": "items.parquet",
-    "oil": "oil.parquet",
-    "holidays_events": "holidays_events.parquet",
-    "stores": "stores.parquet",
-    "test": "test.parquet",
-    "transactions": "transactions.parquet",
-    "train": "train.parquet",
-}
+from Favorita_TSA.dataset import Dataset
 
 
 def load_train_csv(path: str | Path) -> pd.DataFrame:
@@ -48,18 +40,18 @@ def df_to_parquet_packages(df: pd.DataFrame, parquet_path: str | Path) -> None:
 
 
 def split_parquet_to_packages(
-    df: pd.DataFrame, name: str, target_root: str | Path
+    df: pd.DataFrame, name: Dataset, target_root: str | Path
 ) -> None:
     """
     Splittet df in Parquet Parts.
     Ziel: möglichst nah an target_mb, garantiert nicht größer als hard_limit_mb.
     """
-    target_dir = Path(target_root) / name
+    target_dir = Path(target_root)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     total_rows = len(df)
     if total_rows == 0:
-        print(f"📦 Keine Daten für: {name}")
+        print(f"📦 Keine Daten für: {name.value}")
         return
 
     target_bytes = int(99.0 * 1024 * 1024)
@@ -86,7 +78,7 @@ def split_parquet_to_packages(
         )
 
         actual_mb = written_bytes / (1024**2)
-        print(f"   ✅ {name} Part {part}: {actual_mb:.2f} MB")
+        print(f"   ✅ {name.value} Part {part}: {actual_mb:.2f} MB")
         if written_bytes > 0:
             ratio = target_bytes / written_bytes
             rows_est = max(1, int((end_final - start) * ratio))
@@ -134,26 +126,41 @@ def save_tables_to_parquet() -> None:
     Train landet in ../data/train/, andere in ../data/name_pkg/.
     """
 
-    for element in DATA:
-        if element == "train":
+    #    for element in DATA:
+    #       if element == "train":
+    #           split_parquet_to_packages(
+    #               load_train_csv(f"data/raw/{element}.csv"),
+    #               "train",
+    #               f"data/processed/{element}.parquet",
+    #           )
+    #       else:
+    #          df_to_parquet(
+    #              load_df(f"data/raw/{element}.csv"), f"data/processed/{element}.parquet"
+    #          )
+
+    for element in Dataset:
+        if element == Dataset.TRAIN:
             split_parquet_to_packages(
-                load_train_csv(f"data/raw/{element}.csv"),
-                "train",
-                f"data/processed/{element}.parquet",
+                load_train_csv(f"data/raw/{element.value}.csv"),
+                Dataset.TRAIN,
+                f"data/processed/{element.value}",
             )
         else:
             df_to_parquet(
-                load_df(f"data/raw/{element}.csv"), f"data/processed/{element}.parquet"
+                load_df(f"data/raw/{element.value}.csv"),
+                f"data/processed/{element.value}.parquet",
             )
 
 
-def parquet_loader(name: str) -> pd.DataFrame:
-    if name not in DATA:
+def parquet_loader(name: Dataset) -> pd.DataFrame:
+    if name not in Dataset:
         raise ValueError(f"{name} ist kein gültiger Datensatz")
 
     # 🔹 Spezialfall: train besteht aus mehreren Parts
-    if name == "train":
-        base_dir = Path("data/processed") / DATA[name] / "train"
+    if name == Dataset.TRAIN:
+        base_dir = Path("data/processed") / Dataset.TRAIN.value
+
+        print("BASE_DIR", base_dir)
 
         if not base_dir.exists():
             raise FileNotFoundError(f"Train-Verzeichnis nicht gefunden: {base_dir}")
@@ -167,9 +174,15 @@ def parquet_loader(name: str) -> pd.DataFrame:
         return pd.concat(dfs, ignore_index=True)
 
     # 🔹 Standardfall: einzelne Parquet-Datei
-    return pd.read_parquet(Path("data/processed") / DATA[name])
+    return pd.read_parquet(Path(f"data/processed/{name.value}.parquet"))
 
 
 # return pd.read_parquet(f"data/processed/{name}.parquet")
 
 # print(parquet_loader("oil"))
+
+
+save_tables_to_parquet()
+
+
+print(parquet_loader(Dataset.TRAIN))
