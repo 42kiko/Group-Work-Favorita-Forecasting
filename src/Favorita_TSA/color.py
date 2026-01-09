@@ -22,6 +22,9 @@ class ThemeColors:
     uncertainty: str
     anomaly: str
     event: str
+    heat_min: str
+    heat_mid: str
+    heat_max: str
     top20: list[str]
 
 
@@ -53,6 +56,9 @@ class ColorManager:
                     uncertainty=raw["analysis"]["lines"]["uncertainty"],
                     anomaly=raw["analysis"]["markers"]["anomaly"],
                     event=raw["analysis"]["markers"]["event"],
+                    heat_min=raw["visualizations"]["heatmap"]["min"],
+                    heat_mid=raw["visualizations"]["heatmap"]["mid"],
+                    heat_max=raw["visualizations"]["heatmap"]["max"],
                     top20=raw["visualizations"]["top20"],
                 )
             except (FileNotFoundError, KeyError) as e:
