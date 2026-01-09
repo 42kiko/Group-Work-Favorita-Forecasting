@@ -31,6 +31,7 @@ dev = [
   "seaborn>=0.11",
   "ydata-profiling",
   "setuptools",
+  "kaleido>=0.2.1",
 ]
 
 [tool.setuptools]
