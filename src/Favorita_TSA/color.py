@@ -1,91 +1,103 @@
 import os
-from typing import Any, cast
+from dataclasses import dataclass
 
 import plotly.graph_objects as go
 import yaml
 
 
-def load_global_colors(
-    file_path: str = os.path.join("configs", "COLORS.yaml"),
-) -> dict[str, str] | None:
-    """
-    Loads colors from YAML.
-    Typisierung: file_path ist ein String (str), Rückgabe ist ein Dictionary oder None.
-    """
-    try:
-        with open(file_path) as file:
-            return yaml.safe_load(file)
-    except FileNotFoundError:
-        print(f"Error: {file_path} not found.")
-        return None
+@dataclass(frozen=True)
+class ThemeColors:
+    """Stark typisierte Farbdefinitionen für IDE-Support."""
+
+    main_bg: str
+    surface: str
+    grid: str
+    text_primary: str
+    text_secondary: str
+    border: str
+    accent: str
+    observed: str
+    trend: str
+    forecast: str
+    uncertainty: str
+    anomaly: str
+    event: str
+    top20: list[str]
 
 
-def apply_plotly_theme(fig: go.Figure, colors: dict[str, Any]) -> None:
-    """
-    Wendet das Thema an. Nutzt Literale {} statt dict() für Ruff C408.
-    """
-    if not colors:
-        return
+class ColorManager:
+    """Verwaltet das Laden und Bereitstellen der globalen Farben."""
 
-    # 'cast' verhindert Pylance-Fehler bei verschachtelten Zugriffen
-    dark = cast(dict[str, Any], colors.get("theme_dark", {}))
+    _colors: ThemeColors | None = None
 
-    # RAM-Schonung: Lokale Extraktion der benötigten Werte
-    bg = cast(dict[str, str], dark.get("background", {}))
-    text = cast(dict[str, str], dark.get("text", {}))
-    ui = cast(dict[str, str], dark.get("ui", {}))
+    @classmethod
+    def get_colors(
+        cls, file_path: str = os.path.join("configs", "COLORS.yaml")
+    ) -> ThemeColors:
+        if cls._colors is None:
+            try:
+                with open(file_path) as f:
+                    raw = yaml.safe_load(f)
 
+                cls._colors = ThemeColors(
+                    main_bg=raw["theme_dark"]["background"]["main"],
+                    surface=raw["theme_dark"]["background"]["surface"],
+                    grid=raw["theme_dark"]["background"]["grid"],
+                    text_primary=raw["theme_dark"]["text"]["primary"],
+                    text_secondary=raw["theme_dark"]["text"]["secondary"],
+                    border=raw["theme_dark"]["ui"]["border"],
+                    accent=raw["theme_dark"]["ui"]["accent"],
+                    observed=raw["analysis"]["lines"]["observed"],
+                    trend=raw["analysis"]["lines"]["trend"],
+                    forecast=raw["analysis"]["lines"]["forecast"],
+                    uncertainty=raw["analysis"]["lines"]["uncertainty"],
+                    anomaly=raw["analysis"]["markers"]["anomaly"],
+                    event=raw["analysis"]["markers"]["event"],
+                    top20=raw["visualizations"]["top20"],
+                )
+            except (FileNotFoundError, KeyError) as e:
+                print(f"Fehler beim Laden der Farben: {e}")
+                raise
+        return cls._colors
+
+
+def apply_modern_theme(fig: go.Figure) -> None:
+    """Wendet das globale Design auf eine Plotly-Figur an."""
+    c = ColorManager.get_colors()
     fig.update_layout(
-        plot_bgcolor=bg.get("surface"),
-        paper_bgcolor=bg.get("main"),
-        font_color=text.get("primary"),
-        # RUFF C408 FIX: {} statt dict()
-        xaxis={"gridcolor": bg.get("grid"), "linecolor": ui.get("border")},
-        yaxis={"gridcolor": bg.get("grid"), "linecolor": ui.get("border")},
+        plot_bgcolor=c.surface,
+        paper_bgcolor=c.main_bg,
+        font_color=c.text_primary,
+        xaxis={"gridcolor": c.grid, "linecolor": c.border, "zeroline": False},
+        yaxis={"gridcolor": c.grid, "linecolor": c.border, "zeroline": False},
         template="plotly_dark",
     )
 
 
-# --- Execution ---
-colors_data: dict[str, Any] | None = load_global_colors()
-fig_instance: go.Figure = go.Figure()
+# =====================================
+# ANLEITUNG: SO NUTZT DU DIE FARBEN
+# =====================================
+# 1. IMPORT:    from color import ColorManager, apply_modern_theme
+# 2. SETUP:     color = ColorManager.get_colors()
+# 3. NUTZUNG:   Verwende 'color.<name>' ohne Anführungszeichen.
+#
+# BEISPIEL PLOTLY:
+# fig.add_trace(go.Scatter(..., line={"color": color.forecast}))
+#
+# BEISPIEL TABELLE (dein Standard):
+# fig.add_trace(go.Table(header={"fill_color": color.surface}, ...))
+#
+# VORTEIL: Deine IDE (Cursor/VS Code) schlägt dir die Namen nach dem Punkt automatisch vor.
+# =====================================
 
-if colors_data:
-    # Zugriff auf Analyse-Farben
-    analysis = cast(dict[str, Any], colors_data.get("analysis", {}))
-    lines = cast(dict[str, str], analysis.get("lines", {}))
-
-    fig_instance.add_trace(
-        go.Scatter(
-            x=[1, 2, 3],
-            y=[10, 15, 13],
-            # RUFF C408 FIX: line={"color": ...} statt line=dict(color=...)
-            line={"color": lines.get("observed")},
-            name="Observed",
+# Dieser Block sorgt dafür, dass der darin enthaltene Code nur dann ausgeführt wird, wenn du die Datei color.py direkt startest (z. B. um zu testen, ob die Farben richtig geladen werden).
+if __name__ == "__main__":
+    color = ColorManager.get_colors()
+    fig = go.Figure()
+    # Test der Top-20 Liste
+    for i, c in enumerate(color.top20[:5]):
+        fig.add_trace(
+            go.Scatter(x=[1, 2], y=[i, i + 1], line={"color": c}, name=f"Farbe {i+1}")
         )
-    )
-
-    apply_plotly_theme(fig_instance, colors_data)
-
-# --- Execution ---
-colors = load_global_colors()
-fig = go.Figure()
-
-if colors:
-    analysis = cast(dict[str, Any], colors.get("analysis", {}))
-    lines = cast(dict[str, str], analysis.get("lines", {}))
-
-    observed_color = lines.get("observed")
-
-    fig.add_trace(
-        go.Scatter(
-            x=[1, 2, 3],
-            y=[10, 15, 13],
-            # Ruff C408: {} statt dict()
-            line={"color": observed_color},
-            name="Observed",
-        )
-    )
-
-    apply_plotly_theme(fig, colors)
+    apply_modern_theme(fig)
     fig.show()
