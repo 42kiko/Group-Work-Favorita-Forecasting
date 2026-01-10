@@ -2,62 +2,99 @@
 
 # VISUAL REFERENCE (COMMENTS):
 
-# Global Theme
-
+# Global Theme & UI Colors:
 brand:
-  green:  &brand_green "#7EE787"  # Pastel Green
+  # STUFE 1: Die dunkle Basis (0-15%) 
+  navy_dark:    &brand_navy    "#0B0E14"  # Tiefschwarz-Blau
+  black_rich:   &brand_black   "#111827"  # Reines Dunkel
+  navy_deep:    &brand_dnavy   "#121D2F"  # Mitternachts-Marine
+  charcoal:     &brand_surface "#161B22"  # Dunkle Kohle
+  gunmetal:     &brand_grid    "#1F242C"  # Metallisch Dunkel
+  midnight:     &brand_midnight "#23395B" # Tiefsee-Blau
+  deep_space:   &brand_space   "#282E3A"  # Weltraum-Grau
+
+  # STUFE 2: UI & Akzente (15-40%)
+  green_forest: &brand_fgreen  "#224F35"  # Dunkles Tannengrün (Angepasst für Kontrast)
+  emerald_deep: &brand_emerald "#0A5D44"  # Tiefes Smaragd
+  blue_royal:   &brand_royalblue "#1A468C" # Klassisches Königsblau
+  red_brand:    &brand_red     "#DA3633"  # Brand Rot
+  blue_bright:  &brand_bblue   "#2188FF"  # Kräftiges Blau
+  orange_deep:  &brand_dorange "#C24E00"  # Dunkelorange (Mehr Sättigung)
+  gold_brand:   &brand_gold    "#D29922"  # Brand Gold
+
+  # STUFE 3: Die lebendige Mitte (40-70%)
+  blue_brand:   &brand_blue    "#58A6FF"  # Hellblau
+  orange_brand: &brand_orange  "#F0883E"  # Sonnen-Orange
+  cyan_sky:     &brand_cyan    "#39C5CF"  # Cyan
+  green_bright: &brand_lgreen  "#56D364"  # Hellgrün
+  red_coral:    &brand_coral   "#FA7970"  # Koralle
+  salmon:       &brand_salmon  "#F69D50"  # Lachs
+  gray_steel:   &brand_gray    "#8B949E"  # Stahlgrau
+  violet:       &brand_violet  "#CEA5FB"  # Violett
+  purple_soft:  &brand_purple  "#BC8CFF"  # Pastell-Lila
+
+  # STUFE 4: Pastell & High-Light (70-100%)
+  lavender:     &brand_lavender "#DCBDFB" # Lavendel
+  green_brand:  &brand_green   "#7EE787"  # Brand Grün (Pastell)
+  gray_light:   &brand_lgray   "#ABB4BF"  # Lichtgrau
+  sand_glow:    &brand_sand    "#F8E3A1"  # Warmer Sand
+  mint_fresh:   &brand_mint    "#AFF5B4"  # Frische Minze
+  cloud_white:  &brand_cloud   "#D1D5DA"  # Wolkenweiß
+  white_soft:   &brand_white   "#E6EDF3"  # Soft Weiß
+  white_pure:   &brand_pure    "#FFFFFF"  # Absolutes Weiß
+  magenta:      &brand_magenta "#E03E8D"  # Magenta (Kräftig)
 
 # Theme & UI
 
 theme_dark:
   background:
-    main: "#0B0E14"      # Deep Navy/Black
-    surface: "#161B22"   # Dark Charcoal
-    grid: "#1F242C"      # Dark Gunmetal
+    main:      *brand_navy
+    surface:   *brand_surface
+    grid:      *brand_grid
   text:
-    primary: "#E6EDF3"   # Off-White
-    secondary: "#8B949E" # Steel Gray
+    primary:   *brand_white
+    secondary: *brand_gray
   ui:
-    border: "#30363D"    # Slate Gray
-    accent: "#58A6FF"    # Neon Blue
+    border:    *brand_space
+    accent:    *brand_blue
 
 # Time Series Analysis
 analysis:
   lines:
-    observed: "#58A6FF"  # Sky Blue
-    trend: "#F0883E"     # Sunset Orange
-    forecast: *brand_green  # Pastel Green
-    uncertainty: "#23395B" # Deep Midnight Blue
+    observed:  *brand_blue
+    trend:     *brand_orange
+    forecast:  *brand_green
+    uncertainty: *brand_midnight
   markers:
-    anomaly: "#DA3633"   # Crimson Red
-    event: "#D29922"     # Harvest Gold
+    anomaly:   *brand_red
+    event:     *brand_gold
 
 # Heatmap
 heatmap:
-    min: "#111827"       # Rich Black
-    mid: "#3B82F6"       # Bright Blue
-    max: "#10B981"       # Emerald Green
+    min: *brand_black
+    mid: *brand_bblue
+    max: *brand_emerald
 
-visualizations:
 # Top 20 Categorical Groups
+visualizations:
   top20:
-    - "#58A6FF" # 1. Blue
-    - *brand_green # 2. Green
-    - "#F0883E" # 3. Orange
-    - "#D29922" # 4. Gold
-    - "#BC8CFF" # 5. Purple
-    - "#FA7970" # 6. Red
-    - "#39C5CF" # 7. Cyan
-    - "#56D364" # 8. Light Green
-    - "#E36209" # 9. Deep Orange
-    - "#DA3633" # 10. Dark Red
-    - "#ABB4BF" # 11. Gray
-    - "#F69D50" # 12. Salmon
-    - "#2F81F7" # 13. Royal Blue
-    - "#AFF5B4" # 14. Mint
-    - "#DCBDFB" # 15. Lavender
-    - "#CEA5FB" # 16. Soft Violet
-    - "#FF7B72" # 17. Coral
-    - "#121D2F" # 18. Dark Navy
-    - "#3FB950" # 19. Forest Green
-    - "#F8E3A1" # 20. Sand
+    - *brand_blue      # 1. Primär Blau
+    - *brand_green     # 2. Brand Grün (Hell)
+    - *brand_orange    # 3. Brand Orange
+    - *brand_red       # 4. Brand Rot
+    - *brand_purple    # 5. Lila
+    - *brand_gold      # 6. Gold/Gelb
+    - *brand_cyan      # 7. Türkis/Cyan
+    - *brand_fgreen    # 8. Waldgrün (Dunkler Kontrast zu 2)
+    - *brand_dorange   # 9. Dunkelorange
+    - *brand_royalblue # 10. Königsblau (Dunkler Kontrast zu 1)
+    - *brand_coral     # 11. Koralle
+    - *brand_salmon    # 12. Lachs
+    - *brand_violet    # 13. Violett
+    - *brand_emerald   # 14. Smaragdgrün
+    - *brand_lavender  # 15. Lavendel
+    - *brand_mint      # 16. Minze (Sehr hell)
+    - *brand_sand      # 17. Sand/Beige
+    - *brand_bblue     # 18. Hell-Leuchtendes Blau
+    - *brand_gray      # 19. Stahlgrau (Neutral)
+    - *brand_magenta   # 20. Magenta (Kräftig)

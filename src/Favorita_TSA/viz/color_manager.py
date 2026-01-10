@@ -10,7 +10,7 @@ class ColorManager:
     """
     Verwaltet das dynamische Laden der globalen Farben mit intelligenter Automatisierung.
     Unterstützt 2-Wege-Zugriff:
-    1. Flach (Shortcut): color.main_bg oder color.forecast
+    1. Flach (Shortcut): color.main oder color.forecast
     2. Strukturiert: color.theme_dark.background.main
     """
     _colors: SimpleNamespace | None = None
@@ -37,7 +37,7 @@ class ColorManager:
         return result
 
     @classmethod
-    def get_colors(cls, file_path: str = None) -> SimpleNamespace:
+    def get_colors(cls, file_path: str | None = None) -> SimpleNamespace:
         """
         Lädt die COLORS.yaml und erstellt automatische UI-Mappings.
         Verbesserte Pfad-Logik verhindert FileNotFoundError in Notebooks.
@@ -58,7 +58,7 @@ class ColorManager:
                 raise FileNotFoundError(f"COLORS.yaml konnte nicht gefunden werden. Pfade geprüft: {['configs/COLORS.yaml', '../configs/COLORS.yaml']}")
 
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     cls._raw_dict = yaml.safe_load(f)
                 
                 # Weg 1: Flache Shortcuts
