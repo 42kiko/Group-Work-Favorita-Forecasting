@@ -13,6 +13,7 @@ class ColorManager:
     1. Flat (Shortcut): color.main or color.forecast
     2. Structured: color.theme_dark.background.main
     """
+
     _colors: SimpleNamespace | None = None
     _raw_dict: dict[str, Any] | None = None
 
@@ -20,11 +21,15 @@ class ColorManager:
     def _dict_to_namespace(cls, data: Any) -> Any:
         """Recursively converts a dictionary into a SimpleNamespace."""
         if isinstance(data, dict):
-            return SimpleNamespace(**{k: cls._dict_to_namespace(v) for k, v in data.items()})
+            return SimpleNamespace(
+                **{k: cls._dict_to_namespace(v) for k, v in data.items()}
+            )
         return data
 
     @classmethod
-    def _flatten_dict(cls, data: Any, result: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _flatten_dict(
+        cls, data: Any, result: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Extracts all colors onto a flat level for ultra-fast access."""
         if result is None:
             result = {}
@@ -47,23 +52,25 @@ class ColorManager:
             if file_path is None:
                 potential_paths = [
                     os.path.join("configs", "COLORS.yaml"),
-                    os.path.join("..", "configs", "COLORS.yaml")
+                    os.path.join("..", "configs", "COLORS.yaml"),
                 ]
                 for p in potential_paths:
                     if os.path.exists(p):
                         file_path = p
                         break
-            
+
             if file_path is None or not os.path.exists(file_path):
-                raise FileNotFoundError(f"COLORS.yaml could not be found. Checked paths: {['configs/COLORS.yaml', '../configs/COLORS.yaml']}")
+                raise FileNotFoundError(
+                    f"COLORS.yaml could not be found. Checked paths: {['configs/COLORS.yaml', '../configs/COLORS.yaml']}"
+                )
 
             try:
                 with open(file_path, encoding="utf-8") as f:
                     cls._raw_dict = yaml.safe_load(f)
-                
+
                 # Path 1: Flat Shortcuts
                 flat_data = cls._flatten_dict(cls._raw_dict)
-                
+
                 # AUTOMATION: Intelligent mapping for theme colors
                 theme = cls._raw_dict.get("theme_dark", {})
                 bg = theme.get("background", {})
@@ -74,16 +81,20 @@ class ColorManager:
                     "ui_paper": bg.get("main") or bg.get("main_bg") or "#0B0E14",
                     "ui_plot": bg.get("surface") or bg.get("plot_bg") or "#161B22",
                     "ui_grid": bg.get("grid") or "#1F242C",
-                    "ui_text": txt.get("primary") or txt.get("text_primary") or "#E6EDF3",
-                    "ui_border": ui.get("border") or "#30363D"
+                    "ui_text": txt.get("primary")
+                    or txt.get("text_primary")
+                    or "#E6EDF3",
+                    "ui_border": ui.get("border") or "#30363D",
                 }
-                
+
                 # Path 2: Structured Data
                 structured_ns = cls._dict_to_namespace(cls._raw_dict)
-                
+
                 # Merge everything together
-                cls._colors = SimpleNamespace(**{**flat_data, **auto_mapping, **vars(structured_ns)})
-                
+                cls._colors = SimpleNamespace(
+                    **{**flat_data, **auto_mapping, **vars(structured_ns)}
+                )
+
             except Exception as e:
                 print(f"Error during loading: {e}")
                 raise
@@ -95,13 +106,14 @@ class ColorManager:
             cls.get_colors()
         return cls._raw_dict
 
+
 def apply_modern_theme(fig: go.Figure) -> None:
     """
     Applies the design automatically. Uses intelligent 'ui_' mappings
     so the code doesn't break if names in the YAML are changed.
     """
     c = ColorManager.get_colors()
-    
+
     fig.update_layout(
         paper_bgcolor=c.ui_paper,
         plot_bgcolor=c.ui_plot,
@@ -111,8 +123,9 @@ def apply_modern_theme(fig: go.Figure) -> None:
         template="plotly_dark",
     )
 
+
 # INSTRUCTIONS: HOW TO USE THE DESIGN SYSTEM (2 VARIANTS)
-# 
+#
 # 1. THE FAST WAY (Flat / Shortcut):
 #    Ideal for daily coding. All colors are directly accessible.
 #    -> color.forecast, color.main, color.observed, color.top20
@@ -130,12 +143,16 @@ if __name__ == "__main__":
     # Example usage
     color = ColorManager.get_colors()
     fig = go.Figure()
-    
+
     # Example for Shortcut usage
-    top_colors = getattr(color, 'top20', ["#636EFA", "#EF553B", "#00CC96"]) # Fallback if top20 not in YAML
+    top_colors = getattr(
+        color, "top20", ["#636EFA", "#EF553B", "#00CC96"]
+    )  # Fallback if top20 not in YAML
     for i, col in enumerate(top_colors[:5]):
-        fig.add_trace(go.Scatter(x=[1, 2], y=[i, i+1], line={"color": col}, name=f"Color {i+1}"))
-    
+        fig.add_trace(
+            go.Scatter(x=[1, 2], y=[i, i + 1], line={"color": col}, name=f"Color {i+1}")
+        )
+
     apply_modern_theme(fig)
     print("System Check: Colors loaded successfully and theme applied automatically.")
     fig.show()
