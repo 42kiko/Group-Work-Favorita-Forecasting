@@ -1,6 +1,6 @@
 import plotly.io as pio
 
-from Favorita_TSA.color import ColorManager
+from Favorita_TSA.viz.color_manager import ColorManager
 
 
 def set_plotly_theme() -> None:
@@ -13,11 +13,11 @@ def set_plotly_theme() -> None:
     pio.templates["favorita_dark"] = {
         "layout": {
             # Backgrounds
-            "paper_bgcolor": c.main_bg,
+            "paper_bgcolor": c.main,
             "plot_bgcolor": c.surface,
             # Typography
             "font": {
-                "color": c.text_primary,
+                "color": c.primary,
                 "family": "Inter, system-ui, sans-serif",
                 "size": 13,
             },

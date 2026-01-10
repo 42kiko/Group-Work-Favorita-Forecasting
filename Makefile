@@ -2,6 +2,13 @@
 # Favorita Forecasting - Developer Makefile
 # Authors: Agus • Kiko • Patrick
 # ------------------------------------------------------------
+# ------------------------------------------------------------
+# Python version enforcement
+# ------------------------------------------------------------
+
+PYTHON_VERSION := 3.12
+PYTHON_BIN := python$(PYTHON_VERSION)
+
 
 hello:
 	@echo "Hello from Agus, Kiko and Patrick! 🚀"
@@ -81,3 +88,9 @@ else
 	rm -rf .venv
 endif
 	@echo "Done."
+
+
+venv12:
+	@echo "Creating virtual environment with Python $(PYTHON_VERSION)..."
+	@$(PYTHON_BIN) -m venv .venv
+	@echo "Virtual environment created."

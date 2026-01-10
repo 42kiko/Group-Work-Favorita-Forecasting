@@ -1,18 +1,13 @@
 # COLORS.yaml - Central Color Definitions for Time Series & Modern Dark Mode
-#
+
 # VISUAL REFERENCE (COMMENTS):
 
-# Theme & UI
-# Preview | Name            | Hex-Code | Description
-# --------|-----------------|----------|---------------------------------------
-# ⬛       | Main Background | #0B0E14  | Deep, dark background workspace.
-# ⬛       | Surface         | #161B22  | For cards, containers, or boxes.
-# 🔘       | Grid Lines      | #1F242C  | Subtle lines for plot backgrounds.
-# ⬜       | Primary Text    | #E6EDF3  | High-readability light text.
-# 🔘       | Secondary Text  | #8B949E  | For axis labels and legends.
-# 🟫       | Border          | #30363D  | Dark gray for UI element borders.
-# 🟦       | Accent          | #58A6FF  | Neon blue for interactive elements.
+# Global Theme
 
+brand:
+  green:  &brand_green "#7EE787"  # Pastel Green
+
+# Theme & UI
 
 theme_dark:
   background:
@@ -27,55 +22,27 @@ theme_dark:
     accent: "#58A6FF"    # Neon Blue
 
 # Time Series Analysis
-# Preview | Name            | Hex-Code | Function
-# --------|-----------------|----------|---------------------------------------
-# 🟦       | Observed        | #58A6FF  | Actual historical data.
-# 🟧       | Trend           | #F0883E  | Smoothed trend line.
-# 🟩       | Forecast        | #7EE787  | Future values from LSTM model.
-# 🟦       | Uncertainty     | #23395B  | Shaded area (Confidence Interval).
-# 🟥       | Anomaly         | #DA3633  | Highlights for errors/outliers.
-# 🟨       | Event Marker    | #D29922  | Specific markers for events.
-
 analysis:
   lines:
     observed: "#58A6FF"  # Sky Blue
     trend: "#F0883E"     # Sunset Orange
-    forecast: "#7EE787"  # Pastel Green
+    forecast: *brand_green  # Pastel Green
     uncertainty: "#23395B" # Deep Midnight Blue
   markers:
     anomaly: "#DA3633"   # Crimson Red
     event: "#D29922"     # Harvest Gold
 
 # Heatmap
-# Preview | Level           | Hex-Code | Intensity
-# --------|-----------------|----------|---------------------------------------
-# ⬛       | Min             | #111827  | Low (e.g., correlation 0)
-# 🟦       | Mid             | #3B82F6  | Medium
-# 🟩       | Max             | #10B981  | High (e.g., correlation 1)
-
-visualizations:
-  heatmap:
+heatmap:
     min: "#111827"       # Rich Black
     mid: "#3B82F6"       # Bright Blue
     max: "#10B981"       # Emerald Green
 
+visualizations:
 # Top 20 Categorical Groups
-# # | Preview | Hex      | Name         | # | Preview | Hex      | Name
-# --|---------|----------|--------------|---|---------|----------|--------------
-# 1 | 🟦      | #58A6FF  | Blue         |11 | 🔘      | #ABB4BF  | Gray
-# 2 | 🟩      | #7EE787  | Green        |12 | 🟧      | #F69D50  | Salmon
-# 3 | 🟧      | #F0883E  | Orange       |13 | 🟦      | #2F81F7  | Royal Blue
-# 4 | 🟨      | #D29922  | Gold         |14 | 🟩      | #AFF5B4  | Mint
-# 5 | 🟪      | #BC8CFF  | Purple       |15 | 🟪      | #DCBDFB  | Lavender
-# 6 | 🟥      | #FA7970  | Red          |16 | 🟪      | #CEA5FB  | Soft Violet
-# 7 | 🟦      | #39C5CF  | Cyan         |17 | 🟥      | #FF7B72  | Coral
-# 8 | 🟩      | #56D364  | Light Green  |18 | ⬛      | #121D2F  | Dark Navy
-# 9 | 🟧      | #E36209  | Deep Orange  |19 | 🟩      | #3FB950  | Forest Green
-# 10| 🟥      | #DA3633  | Dark Red     |20 | 🟨      | #F8E3A1  | Sand
-
   top20:
     - "#58A6FF" # 1. Blue
-    - "#7EE787" # 2. Green
+    - *brand_green # 2. Green
     - "#F0883E" # 3. Orange
     - "#D29922" # 4. Gold
     - "#BC8CFF" # 5. Purple
