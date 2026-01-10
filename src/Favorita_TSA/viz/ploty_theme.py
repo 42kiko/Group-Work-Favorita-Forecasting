@@ -13,11 +13,7 @@ def set_plotly_theme() -> None:
     c = ColorManager.get_colors()
 
     # Trial brand scale: black_rich (0.0) -> blue_bright (0.5) -> gold_brand (1.0)
-    brand_scale = [
-        [0.0, c.black_rich],
-        [0.5, c.blue_bright],
-        [1.0, c.gold_brand]
-    ]
+    brand_scale = [[0.0, c.black_rich], [0.5, c.blue_bright], [1.0, c.gold_brand]]
 
     pio.templates["favorita_dark"] = {
         "layout": {
@@ -26,59 +22,58 @@ def set_plotly_theme() -> None:
             "plot_bgcolor": c.ui_plot,
             "font": {"color": c.ui_text, "family": "Inter, sans-serif"},
             "title": {"font": {"color": c.ui_text}, "x": 0.05},
-            
             # 2. DISCRETE COLORS (Bars, Lines, Pie Charts)
             "colorway": c.top20,
-            
             # 3. CONTINUOUS COLORS (Heatmaps & Gradients)
             "coloraxis": {
                 "colorscale": brand_scale,
                 "autocolorscale": False,
                 "colorbar": {
                     "tickfont": {"color": c.ui_text},
-                    "title": {"font": {"color": c.ui_text}}
-                }
+                    "title": {"font": {"color": c.ui_text}},
+                },
             },
             # 'colorscale' ensures PX functions find the scale for simple plots
             "colorscale": {
                 "sequential": brand_scale,
                 "sequentialminus": brand_scale,
-                "diverging": brand_scale
+                "diverging": brand_scale,
             },
-            
             # 4. AXES & GRID SYSTEM
             "xaxis": {
-                "gridcolor": c.ui_grid, 
+                "gridcolor": c.ui_grid,
                 "linecolor": c.ui_border,
                 "tickfont": {"color": c.ui_text},
                 "title": {"font": {"color": c.ui_text}},
                 "zeroline": False,
-                "automargin": True
+                "automargin": True,
             },
             "yaxis": {
-                "gridcolor": c.ui_grid, 
+                "gridcolor": c.ui_grid,
                 "linecolor": c.ui_border,
                 "tickfont": {"color": c.ui_text},
                 "title": {"font": {"color": c.ui_text}},
                 "zeroline": False,
-                "automargin": True
+                "automargin": True,
             },
-            
             # 5. INTERACTIVE UI ELEMENTS
             "legend": {
                 "bgcolor": "rgba(0,0,0,0)",
                 "bordercolor": c.ui_border,
-                "font": {"color": c.ui_text}
+                "font": {"color": c.ui_text},
             },
             "hoverlabel": {
-                "bgcolor": c.ui_plot,
-                "font": {"color": c.ui_text, "size": 12},
-                "bordercolor": c.ui_border
+                "bgcolor": None,
+                "bordercolor": None,
+                "font": {
+                    # "color": c.ui_text,
+                    "size": 12
+                },
+                "align": "left",
             },
-            
             # 6. SPECIAL PLOT CONFIGURATIONS
             "boxmode": "group",
-            "piecolorway": c.top20
+            "piecolorway": c.top20,
         }
     }
 
