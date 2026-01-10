@@ -67,13 +67,13 @@ analysis:
     uncertainty: *brand_midnight
   markers:
     anomaly:   *brand_red
-    event:     *brand_gold
+    event:     *brand_emerald
 
 # Heatmap
 heatmap:
     min: *brand_black
     mid: *brand_bblue
-    max: *brand_emerald
+    max: *brand_gold
 
 # Top 20 Categorical Groups
 visualizations:
