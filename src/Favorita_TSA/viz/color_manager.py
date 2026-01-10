@@ -8,24 +8,24 @@ import yaml
 
 class ColorManager:
     """
-    Verwaltet das dynamische Laden der globalen Farben mit intelligenter Automatisierung.
-    Unterstützt 2-Wege-Zugriff:
-    1. Flach (Shortcut): color.main oder color.forecast
-    2. Strukturiert: color.theme_dark.background.main
+    Manages dynamic loading of global colors with intelligent automation.
+    Supports 2-way access:
+    1. Flat (Shortcut): color.main or color.forecast
+    2. Structured: color.theme_dark.background.main
     """
     _colors: SimpleNamespace | None = None
     _raw_dict: dict[str, Any] | None = None
 
     @classmethod
     def _dict_to_namespace(cls, data: Any) -> Any:
-        """Konvertiert Dictionary rekursiv in SimpleNamespace."""
+        """Recursively converts a dictionary into a SimpleNamespace."""
         if isinstance(data, dict):
             return SimpleNamespace(**{k: cls._dict_to_namespace(v) for k, v in data.items()})
         return data
 
     @classmethod
     def _flatten_dict(cls, data: Any, result: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Extrahiert alle Farben auf eine flache Ebene für ultraschnellen Zugriff."""
+        """Extracts all colors onto a flat level for ultra-fast access."""
         if result is None:
             result = {}
         if isinstance(data, dict):
@@ -39,11 +39,11 @@ class ColorManager:
     @classmethod
     def get_colors(cls, file_path: str | None = None) -> SimpleNamespace:
         """
-        Lädt die COLORS.yaml und erstellt automatische UI-Mappings.
-        Verbesserte Pfad-Logik verhindert FileNotFoundError in Notebooks.
+        Loads COLORS.yaml and creates automatic UI mappings.
+        Improved path logic prevents FileNotFoundError in notebooks.
         """
         if cls._colors is None:
-            # ROBUSTE PFAD-SUCHE: Prüft erst Root, dann eine Ebene höher
+            # ROBUST PATH SEARCH: Checks root first, then one level up
             if file_path is None:
                 potential_paths = [
                     os.path.join("configs", "COLORS.yaml"),
@@ -55,16 +55,16 @@ class ColorManager:
                         break
             
             if file_path is None or not os.path.exists(file_path):
-                raise FileNotFoundError(f"COLORS.yaml konnte nicht gefunden werden. Pfade geprüft: {['configs/COLORS.yaml', '../configs/COLORS.yaml']}")
+                raise FileNotFoundError(f"COLORS.yaml could not be found. Checked paths: {['configs/COLORS.yaml', '../configs/COLORS.yaml']}")
 
             try:
                 with open(file_path, encoding="utf-8") as f:
                     cls._raw_dict = yaml.safe_load(f)
                 
-                # Weg 1: Flache Shortcuts
+                # Path 1: Flat Shortcuts
                 flat_data = cls._flatten_dict(cls._raw_dict)
                 
-                # AUTOMATISIERUNG: Intelligentes Mapping für Theme-Farben
+                # AUTOMATION: Intelligent mapping for theme colors
                 theme = cls._raw_dict.get("theme_dark", {})
                 bg = theme.get("background", {})
                 txt = theme.get("text", {})
@@ -78,14 +78,14 @@ class ColorManager:
                     "ui_border": ui.get("border") or "#30363D"
                 }
                 
-                # Weg 2: Strukturierte Daten
+                # Path 2: Structured Data
                 structured_ns = cls._dict_to_namespace(cls._raw_dict)
                 
-                # Alles zusammenfügen
+                # Merge everything together
                 cls._colors = SimpleNamespace(**{**flat_data, **auto_mapping, **vars(structured_ns)})
                 
             except Exception as e:
-                print(f"Fehler beim Laden: {e}")
+                print(f"Error during loading: {e}")
                 raise
         return cls._colors
 
@@ -97,8 +97,8 @@ class ColorManager:
 
 def apply_modern_theme(fig: go.Figure) -> None:
     """
-    Wendet das Design vollautomatisch an. Nutzt die intelligenten 'ui_'-Mappings,
-    damit der Code nicht bricht, wenn Namen in der YAML geändert werden.
+    Applies the design automatically. Uses intelligent 'ui_' mappings
+    so the code doesn't break if names in the YAML are changed.
     """
     c = ColorManager.get_colors()
     
@@ -111,34 +111,31 @@ def apply_modern_theme(fig: go.Figure) -> None:
         template="plotly_dark",
     )
 
-# =============================================================================
-# ANLEITUNG: SO NUTZT DU DAS DESIGN-SYSTEM (2 VARIANTEN)
-# =============================================================================
-#
-# 1. DER SCHNELLE WEG (Flach / Shortcut):
-#    Ideal für tägliches Coding. Alle Farben sind direkt erreichbar.
+# INSTRUCTIONS: HOW TO USE THE DESIGN SYSTEM (2 VARIANTS)
+# 
+# 1. THE FAST WAY (Flat / Shortcut):
+#    Ideal for daily coding. All colors are directly accessible.
 #    -> color.forecast, color.main, color.observed, color.top20
 #
-# 2. DER STRUKTURIERTE WEG (Pfad):
-#    Ideal für Ordnung und den Audit-Plot. Folgt der YAML-Hierarchie.
+# 2. THE STRUCTURED WAY (Path):
+#    Ideal for organization and audit plots. Follows the YAML hierarchy.
 #    -> color.theme_dark.background.main
 #    -> color.analysis.lines.observed
 #
-# 3. DAS AUTOMATISCHE THEME:
-#    Einfach 'apply_modern_theme(fig)' aufrufen. Es zieht sich die korrekten
-#    Farben für den Hintergrund und Achsen selbstständig aus der YAML.
-#
-# =============================================================================
+# 3. THE AUTOMATIC THEME:
+#    Simply call 'apply_modern_theme(fig)'. It automatically pulls the
+#    correct background and axis colors from the YAML.
 
 if __name__ == "__main__":
+    # Example usage
     color = ColorManager.get_colors()
     fig = go.Figure()
     
-    # Beispiel für Shortcut-Nutzung
-    top_colors = color.top20 
+    # Example for Shortcut usage
+    top_colors = getattr(color, 'top20', ["#636EFA", "#EF553B", "#00CC96"]) # Fallback if top20 not in YAML
     for i, col in enumerate(top_colors[:5]):
-        fig.add_trace(go.Scatter(x=[1, 2], y=[i, i+1], line={"color": col}, name=f"Farbe {i+1}"))
+        fig.add_trace(go.Scatter(x=[1, 2], y=[i, i+1], line={"color": col}, name=f"Color {i+1}"))
     
     apply_modern_theme(fig)
-    print("System-Check: Farben erfolgreich geladen und Theme automatisch angewendet.")
+    print("System Check: Colors loaded successfully and theme applied automatically.")
     fig.show()

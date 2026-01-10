@@ -4,48 +4,47 @@
 
 # Global Theme & UI Colors:
 brand:
-  # STUFE 1: Die dunkle Basis (0-15%) 
-  navy_dark:    &brand_navy    "#0B0E14"  # Tiefschwarz-Blau
-  black_rich:   &brand_black   "#111827"  # Reines Dunkel
-  navy_deep:    &brand_dnavy   "#121D2F"  # Mitternachts-Marine
-  charcoal:     &brand_surface "#161B22"  # Dunkle Kohle
-  gunmetal:     &brand_grid    "#1F242C"  # Metallisch Dunkel
-  midnight:     &brand_midnight "#23395B" # Tiefsee-Blau
-  deep_space:   &brand_space   "#282E3A"  # Weltraum-Grau
+  # LEVEL 1: The Dark Base (0-15%) 
+  navy_dark:    &brand_navy    "#0B0E14"  # Deep Black-Blue
+  black_rich:   &brand_black   "#111827"  # Pure Dark
+  navy_deep:    &brand_dnavy   "#121D2F"  # Midnight Navy
+  charcoal:     &brand_surface "#161B22"  # Dark Charcoal
+  gunmetal:     &brand_grid    "#1F242C"  # Metallic Dark
+  midnight:     &brand_midnight "#23395B" # Deep Sea Blue
+  deep_space:   &brand_space   "#282E3A"  # Deep Space Gray
 
-  # STUFE 2: UI & Akzente (15-40%)
-  green_forest: &brand_fgreen  "#224F35"  # Dunkles Tannengrün (Angepasst für Kontrast)
-  emerald_deep: &brand_emerald "#0A5D44"  # Tiefes Smaragd
-  blue_royal:   &brand_royalblue "#1A468C" # Klassisches Königsblau
-  red_brand:    &brand_red     "#DA3633"  # Brand Rot
-  blue_bright:  &brand_bblue   "#2188FF"  # Kräftiges Blau
-  orange_deep:  &brand_dorange "#C24E00"  # Dunkelorange (Mehr Sättigung)
+  # LEVEL 2: UI & Accents (15-40%)
+  green_forest: &brand_fgreen  "#224F35"  # Dark Forest Green (Adjusted for contrast)
+  emerald_deep: &brand_emerald "#0A5D44"  # Deep Emerald
+  blue_royal:   &brand_royalblue "#1A468C" # Classic Royal Blue
+  red_brand:    &brand_red     "#DA3633"  # Brand Red
+  blue_bright:  &brand_bblue   "#2188FF"  # Vivid Blue
+  orange_deep:  &brand_dorange "#C24E00"  # Dark Orange (Higher Saturation)
   gold_brand:   &brand_gold    "#D29922"  # Brand Gold
 
-  # STUFE 3: Die lebendige Mitte (40-70%)
-  blue_brand:   &brand_blue    "#58A6FF"  # Hellblau
-  orange_brand: &brand_orange  "#F0883E"  # Sonnen-Orange
+  # LEVEL 3: The Vibrant Mid-Range (40-70%)
+  blue_brand:   &brand_blue    "#58A6FF"  # Light Blue
+  orange_brand: &brand_orange  "#F0883E"  # Sun Orange
   cyan_sky:     &brand_cyan    "#39C5CF"  # Cyan
-  green_bright: &brand_lgreen  "#56D364"  # Hellgrün
-  red_coral:    &brand_coral   "#FA7970"  # Koralle
-  salmon:       &brand_salmon  "#F69D50"  # Lachs
-  gray_steel:   &brand_gray    "#8B949E"  # Stahlgrau
-  violet:       &brand_violet  "#CEA5FB"  # Violett
-  purple_soft:  &brand_purple  "#BC8CFF"  # Pastell-Lila
+  green_bright: &brand_lgreen  "#56D364"  # Bright Green
+  red_coral:    &brand_coral   "#FA7970"  # Coral
+  salmon:       &brand_salmon  "#F69D50"  # Salmon
+  gray_steel:   &brand_gray    "#8B949E"  # Steel Gray
+  violet:       &brand_violet  "#CEA5FB"  # Violet
+  purple_soft:  &brand_purple  "#BC8CFF"  # Pastel Purple
 
-  # STUFE 4: Pastell & High-Light (70-100%)
-  lavender:     &brand_lavender "#DCBDFB" # Lavendel
-  green_brand:  &brand_green   "#7EE787"  # Brand Grün (Pastell)
-  gray_light:   &brand_lgray   "#ABB4BF"  # Lichtgrau
-  sand_glow:    &brand_sand    "#F8E3A1"  # Warmer Sand
-  mint_fresh:   &brand_mint    "#AFF5B4"  # Frische Minze
-  cloud_white:  &brand_cloud   "#D1D5DA"  # Wolkenweiß
-  white_soft:   &brand_white   "#E6EDF3"  # Soft Weiß
-  white_pure:   &brand_pure    "#FFFFFF"  # Absolutes Weiß
-  magenta:      &brand_magenta "#E03E8D"  # Magenta (Kräftig)
+  # LEVEL 4: Pastel & Highlights (70-100%)
+  lavender:     &brand_lavender "#DCBDFB" # Lavender
+  green_brand:  &brand_green   "#7EE787"  # Brand Green (Pastel)
+  gray_light:   &brand_lgray   "#ABB4BF"  # Light Gray
+  sand_glow:    &brand_sand    "#F8E3A1"  # Warm Sand
+  mint_fresh:   &brand_mint    "#AFF5B4"  # Fresh Mint
+  cloud_white:  &brand_cloud   "#D1D5DA"  # Cloud White
+  white_soft:   &brand_white   "#E6EDF3"  # Soft White
+  white_pure:   &brand_pure    "#FFFFFF"  # Absolute White
+  magenta:      &brand_magenta "#E03E8D"  # Magenta (Vivid)
 
 # Theme & UI
-
 theme_dark:
   background:
     main:      *brand_navy
@@ -78,23 +77,23 @@ heatmap:
 # Top 20 Categorical Groups
 visualizations:
   top20:
-    - *brand_blue      # 1. Primär Blau
-    - *brand_green     # 2. Brand Grün (Hell)
+    - *brand_blue      # 1. Primary Blue
+    - *brand_green     # 2. Brand Green (Light)
     - *brand_orange    # 3. Brand Orange
-    - *brand_red       # 4. Brand Rot
-    - *brand_purple    # 5. Lila
-    - *brand_gold      # 6. Gold/Gelb
-    - *brand_cyan      # 7. Türkis/Cyan
-    - *brand_fgreen    # 8. Waldgrün (Dunkler Kontrast zu 2)
-    - *brand_dorange   # 9. Dunkelorange
-    - *brand_royalblue # 10. Königsblau (Dunkler Kontrast zu 1)
-    - *brand_coral     # 11. Koralle
-    - *brand_salmon    # 12. Lachs
-    - *brand_violet    # 13. Violett
-    - *brand_emerald   # 14. Smaragdgrün
-    - *brand_lavender  # 15. Lavendel
-    - *brand_mint      # 16. Minze (Sehr hell)
+    - *brand_red       # 4. Brand Red
+    - *brand_purple    # 5. Purple
+    - *brand_gold      # 6. Gold/Yellow
+    - *brand_cyan      # 7. Turquoise/Cyan
+    - *brand_fgreen    # 8. Forest Green (Dark contrast to 2)
+    - *brand_dorange   # 9. Dark Orange
+    - *brand_royalblue # 10. Royal Blue (Dark contrast to 1)
+    - *brand_coral     # 11. Coral
+    - *brand_salmon    # 12. Salmon
+    - *brand_violet    # 13. Violet
+    - *brand_emerald   # 14. Emerald Green
+    - *brand_lavender  # 15. Lavender
+    - *brand_mint      # 16. Mint (Very light)
     - *brand_sand      # 17. Sand/Beige
-    - *brand_bblue     # 18. Hell-Leuchtendes Blau
-    - *brand_gray      # 19. Stahlgrau (Neutral)
-    - *brand_magenta   # 20. Magenta (Kräftig)
+    - *brand_bblue     # 18. Bright Vivid Blue
+    - *brand_gray      # 19. Steel Gray (Neutral)
+    - *brand_magenta   # 20. Magenta (Vivid)
