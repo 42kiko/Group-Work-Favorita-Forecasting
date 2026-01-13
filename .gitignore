@@ -151,3 +151,8 @@ cython_debug/
 # macOS System Files
 # =====================================
 .DS_Store
+
+# =====================================
+# Working Data Frames 
+# =====================================
+fact_table.parquet

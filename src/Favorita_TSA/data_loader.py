@@ -152,6 +152,13 @@ def save_tables_to_parquet() -> None:
             )
 
 
+def parquet_save(df: pd.DataFrame, name: str) -> None:
+    df_to_parquet(
+        df,
+        f"data/processed/{name}.parquet",
+    )
+
+
 def parquet_loader(name: Dataset) -> pd.DataFrame:
     if name not in Dataset:
         raise ValueError(f"{name} ist kein gültiger Datensatz")
