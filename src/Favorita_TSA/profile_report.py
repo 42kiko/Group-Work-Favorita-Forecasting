@@ -23,4 +23,4 @@ for dataset, dataframe in all_data.items():
         html={"style": {"theme": "united"}},
     )
 
-    profile.to_file(f"./reports/{dataset.value}_report.html")
+    profile.to_file(f"./reports/ydata/{dataset.value}_report.html")
