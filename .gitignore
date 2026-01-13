@@ -155,4 +155,9 @@ cython_debug/
 # =====================================
 # Working Data Frames 
 # =====================================
-fact_table.parquet
+/data/processed/preprocessed 
+
+# =====================================
+# OPEN_AI_KEY File 
+# =====================================
+key.py
