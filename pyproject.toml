@@ -32,8 +32,6 @@ dev = [
   "ydata-profiling",
   "setuptools",
   "kaleido>=0.2.1",
-  "pandasai",
-  "pandasai-litellm",
 ]
 
 [tool.setuptools]
