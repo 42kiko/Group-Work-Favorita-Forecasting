@@ -1,8 +1,8 @@
 import pandas as pd
 from ydata_profiling import ProfileReport
 
-from Favorita_TSA.data_loader import parquet_loader
-from Favorita_TSA.dataset import Dataset
+from Favorita_TSA.utils.data_loader import parquet_loader
+from Favorita_TSA.utils.dataset import Dataset
 
 all_data: dict[Dataset, pd.DataFrame] = {
     Dataset.OIL: parquet_loader(Dataset.OIL.value),

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from Favorita_TSA.data_loader import parquet_loader
+from Favorita_TSA.utils.data_loader import parquet_loader
 
 
 def df_to_html(df: pd.DataFrame, max_rows: int = 50) -> str:

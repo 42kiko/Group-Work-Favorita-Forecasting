@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from Favorita_TSA.dataset import Dataset
+from Favorita_TSA.utils.dataset import Dataset
 
 
 def load_train_csv(path: str | Path) -> pd.DataFrame:
@@ -155,7 +155,7 @@ def save_tables_to_parquet() -> None:
 def parquet_save(df: pd.DataFrame, name: str) -> None:
     df_to_parquet(
         df,
-        f"data/processed/{name}.parquet",
+        f"data/processed/({name}.parquet",
     )
 
 
