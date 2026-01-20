@@ -58,6 +58,7 @@ setup:
 	@echo "Virtual environment created."
 	@echo "Activate with:"
 	@echo "  $(ACTIVATE)"
+	$(ACTIVATE)
 
 
 install:
