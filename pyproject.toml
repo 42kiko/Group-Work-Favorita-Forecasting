@@ -19,6 +19,7 @@ dependencies = [
   "plotly>=5.18.0",
   "plotly-stubs>=0.1.1",
   "nbformat>=4.2.0",
+  "streamlit",
 ]
 
 [project.optional-dependencies]
