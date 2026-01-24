@@ -155,7 +155,7 @@ def save_tables_to_parquet() -> None:
 def parquet_save(df: pd.DataFrame, name: str) -> None:
     df_to_parquet(
         df,
-        f"data/processed/({name}.parquet",
+        f"data/processed/preprocessed/{name}.parquet",
     )
 
 
