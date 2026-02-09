@@ -95,3 +95,7 @@ venv12:
 	@echo "Creating virtual environment with Python $(PYTHON_VERSION)..."
 	@$(PYTHON_BIN) -m venv .venv
 	@echo "Virtual environment created."
+
+
+run app:
+	streamlit run src/streamlit_app/app.py
