@@ -109,7 +109,8 @@ CV²	Bedeutung
 
 Die Kombination aus ADI & CV² ist der bekannteste professionelle Klassifikator:
 
-Typ	ADI	CV²
+Typ		ADI		CV²
+
 Smooth	≤ 1.32	≤ 0.49
 Erratic	≤ 1.32	> 0.49
 Intermittent	> 1.32	≤ 0.49
@@ -119,11 +120,11 @@ Lumpy	> 1.32	> 0.49
 
 Interpretation:
 
-Typ	Forecastbarkeit
-Smooth	sehr gut
-Erratic	gut
-Intermittent	nur spezielle Modelle
-Lumpy	oft nicht sinnvoll
+Typ					Forecastbarkeit
+Smooth				sehr gut
+Erratic				gut
+Intermittent		nur spezielle Modelle
+Lumpy				oft nicht sinnvoll
 
 
 ⸻
@@ -226,3 +227,23 @@ Forecastability ist kein ML-Problem.
 Es ist ein Informationsdichte-Problem.
 
 Und diese Metriken messen exakt diese Informationsdichte.
+
+
+
+
+
+-----  **Active Span Days** ------ 
+
+Lange Verkaufslücken sind oft Delisting oder OOS, nicht Intermittenz.
+
+Best-Practice-Regel
+	•	Definiere max_gap_days (typisch: 30–90 Öffnungstage, je nach Kategorie)
+	•	Wenn zwischen zwei Verkaufstagen:
+
+\Delta t > max\_gap\_days
+
+→ Split in getrennte Active-Spans
+
+Für ADI empfehle ich:
+	•	Nur den letzten Active-Span verwenden
+(repräsentiert aktuelle Nachfragecharakteristik)
