@@ -182,6 +182,7 @@ for col in meta_cols:
 
 metrics_df["perishable"] = metrics_df["perishable"].astype(bool)
 
+
 st.subheader("🧾 Store - Item Forecastability Table")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -296,15 +297,6 @@ st.data_editor(
     use_container_width=True,
     hide_index=True,
     disabled=display_cols,
-    column_config={
-        "total_units": st.column_config.NumberColumn(label="Units sold", format="{:,}"),
-        "sales_density": st.column_config.NumberColumn(
-            label="Density", format="{:.2f}"
-        ),
-        "adi": st.column_config.NumberColumn(label="ADI", format="{:.2f}"),
-        "cv2": st.column_config.NumberColumn(label="CV²", format="{:.2f}"),
-        "perishable": st.column_config.CheckboxColumn(label="Perishable"),
-    },
 )
 
 
