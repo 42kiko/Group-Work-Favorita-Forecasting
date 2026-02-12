@@ -6,6 +6,7 @@ from Favorita_TSA.preprocess_eda import load_table
 from Favorita_TSA.utils.data_loader import parquet_loader
 from Favorita_TSA.utils.dataset import Dataset, PreDataset
 
+st.set_page_config(layout="wide")
 # -------------------------------------------------
 # Load data
 # -------------------------------------------------
@@ -112,6 +113,28 @@ def build_store_item_metrics(
 
     agg.replace([np.inf, -np.inf], np.nan, inplace=True)
 
+    # -----------------------------
+    # Croston demand type (vectorized)
+    # -----------------------------
+    ADI_THR = 1.32
+    CV2_THR = 0.49
+
+    agg["pattern"] = np.select(
+        [
+            (agg["adi"] <= ADI_THR) & (agg["cv2"] <= CV2_THR),
+            (agg["adi"] <= ADI_THR) & (agg["cv2"] > CV2_THR),
+            (agg["adi"] > ADI_THR) & (agg["cv2"] <= CV2_THR),
+            (agg["adi"] > ADI_THR) & (agg["cv2"] > CV2_THR),
+        ],
+        [
+            "Smooth",
+            "Erratic",
+            "Intermittent",
+            "Lumpy",
+        ],
+        default="Unknown",
+    )
+
     return agg[
         [
             store_col,
@@ -125,6 +148,7 @@ def build_store_item_metrics(
             "adi",
             "cv2",
             "total_units",
+            "pattern",
         ]
     ]
 
@@ -133,6 +157,18 @@ def build_store_item_metrics(
 # Build metrics
 # -------------------------------------------------
 metrics_df = build_store_item_metrics(df_store_item_daily)
+
+PATTERN_EMOJI = {
+    "Smooth": "🟢",
+    "Erratic": "🟡",
+    "Intermittent": "🟠",
+    "Lumpy": "🔴",
+    "Unknown": "⚪",
+}
+
+metrics_df["pattern_emoji"] = metrics_df["pattern"].map(PATTERN_EMOJI)
+
+metrics_df["pattern_label"] = metrics_df["pattern_emoji"] + " " + metrics_df["pattern"]
 
 item_meta = load_item_meta()
 
@@ -143,37 +179,54 @@ for col in meta_cols:
         dict(zip(item_meta["item_nbr"], item_meta[col], strict=False))
     )
 
+
+metrics_df["perishable"] = metrics_df["perishable"].astype(bool)
+
 st.subheader("🧾 Store - Item Forecastability Table")
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     fam_filter = st.multiselect(
         "Family",
         sorted(metrics_df["family"].dropna().unique()),
-        default=None,
     )
 
 with col2:
-    perishable_filter = st.selectbox(
-        "Perishable",
-        options=["All", True, False],
-        index=0,
+    pattern_filter = st.multiselect(
+        "Demand Type",
+        ["Smooth", "Erratic", "Intermittent", "Lumpy"],
     )
 
 with col3:
-    min_density = st.slider("Min Density", 0.0, 1.0, 0.1, 0.05)
+    perishable_filter = st.selectbox(
+        "Perishable",
+        ["All", True, False],
+    )
 
+with col4:
+    min_density = st.slider(
+        "Min density (sales_density)",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.10,
+        step=0.01,
+    )
 
 df_view = metrics_df.copy()
 
 if fam_filter:
     df_view = df_view[df_view["family"].isin(fam_filter)]
 
+if pattern_filter:
+    df_view = df_view[df_view["pattern"].isin(pattern_filter)]
+
 if perishable_filter != "All":
     df_view = df_view[df_view["perishable"] == perishable_filter]
 
+# ✅ density filter
 df_view = df_view[df_view["sales_density"] >= min_density]
+
 # -------------------------------------------------
 # Guide (aligned to your column names)
 # -------------------------------------------------
@@ -228,6 +281,7 @@ display_cols = [
     "emoji",
     "family",
     "class",
+    "pattern_label",
     "perishable",
     "total_units",
     "active_span_days",
@@ -237,7 +291,30 @@ display_cols = [
     "cv2",
 ]
 
-st.dataframe(
+st.data_editor(
     df_view[display_cols].sort_values("total_units", ascending=False),
     use_container_width=True,
+    hide_index=True,
+    disabled=display_cols,
+    column_config={
+        "total_units": st.column_config.NumberColumn(label="Units sold", format="{:,}"),
+        "sales_density": st.column_config.NumberColumn(
+            label="Density", format="{:.2f}"
+        ),
+        "adi": st.column_config.NumberColumn(label="ADI", format="{:.2f}"),
+        "cv2": st.column_config.NumberColumn(label="CV²", format="{:.2f}"),
+        "perishable": st.column_config.CheckboxColumn(label="Perishable"),
+    },
 )
+
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Rows shown", f"{len(df_view):,}")
+col2.metric("Unique stores", df_view["store_nbr"].nunique())
+col3.metric("Unique items", df_view["item_nbr"].nunique())
+
+st.divider()
+
+
+st.metric("Smooth share", f"{(df_view['pattern']=='Smooth').mean():.1%}")
