@@ -183,7 +183,7 @@ for col in meta_cols:
 metrics_df["perishable"] = metrics_df["perishable"].astype(bool)
 
 
-st.subheader("🧾 Store - Item Forecastability Table")
+st.subheader("🧾 Store - Item daily Forecastability Table")
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -308,5 +308,40 @@ col3.metric("Unique items", df_view["item_nbr"].nunique())
 
 st.divider()
 
+# -------------------------------------------------
+# Demand type shares (colored labels)
+# -------------------------------------------------
+PATTERN_COLOR = {
+    "Smooth": "#2ecc71",  # green
+    "Erratic": "#f1c40f",  # yellow
+    "Intermittent": "#e67e22",  # orange
+    "Lumpy": "#e74c3c",  # red
+    "Unknown": "#95a5a6",  # grey
+}
 
-st.metric("Smooth share", f"{(df_view['pattern']=='Smooth').mean():.1%}")
+PATTERN_EMOJI = {
+    "Smooth": "🟢",
+    "Erratic": "🟡",
+    "Intermittent": "🟠",
+    "Lumpy": "🔴",
+    "Unknown": "⚪",
+}
+
+
+def colored_label(pattern: str) -> str:
+    color = PATTERN_COLOR.get(pattern, "#95a5a6")
+    emoji = PATTERN_EMOJI.get(pattern, "⚪")
+    return f"<span style='color:{color}; font-weight:700;'>{emoji} {pattern}</span>"
+
+
+patterns = ["Smooth", "Erratic", "Intermittent", "Lumpy"]
+
+c1, c2, c3, c4 = st.columns(4)
+cols = [c1, c2, c3, c4]
+
+for col, p in zip(cols, patterns, strict=False):
+    share = (df_view["pattern"] == p).mean()
+    with col:
+        # use HTML for colored title
+        st.markdown(colored_label(p), unsafe_allow_html=True)
+        st.metric(label="", value=f"{share:.1%}")
