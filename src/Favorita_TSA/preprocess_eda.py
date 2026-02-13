@@ -5,14 +5,33 @@ from Favorita_TSA.utils.dataset import Dataset, PreDataset
 
 
 def create_fact_table():
-    df_train = parquet_loader(Dataset.TRAIN)
-    df_fact = df_train.copy()
-    df_fact["date"] = pd.to_datetime(df_fact["date"])
-    df_fact["year"] = df_fact["date"].dt.year
-    df_fact["month"] = df_fact["date"].dt.to_period("M").dt.start_time
-    df_fact["week"] = df_fact["date"].dt.to_period("W-MON").dt.start_time
-    df_fact["dow"] = df_fact["date"].dt.dayofweek
-    return df_fact
+    df = parquet_loader(Dataset.TRAIN).copy()
+
+    df["date"] = pd.to_datetime(df["date"])
+
+    # -------------------------
+    # Daily
+    # -------------------------
+    df["year"] = df["date"].dt.year
+    df["dow"] = df["date"].dt.dayofweek
+
+    # -------------------------
+    # Weekly (ISO clean)
+    # -------------------------
+    iso = df["date"].dt.isocalendar()
+
+    df["year_iso"] = iso.year
+    df["week"] = iso.week.astype(int)
+
+    # Montag als Week Start (Timestamp)
+    df["week_start"] = df["date"] - pd.to_timedelta(df["dow"], unit="D")
+
+    # -------------------------
+    # Monthly
+    # -------------------------
+    df["month"] = df["date"].dt.to_period("M").dt.start_time
+
+    return df
 
 
 def save_fact_table():
@@ -115,7 +134,11 @@ def item_weekly(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def store_item_weekly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["store_nbr", "item_nbr", "week"], ALL_METRICS_UNIT_SALES)
+    return aggregate(
+        df,
+        ["store_nbr", "item_nbr", "year_iso", "week", "week_start"],
+        ALL_METRICS_UNIT_SALES,
+    )
 
 
 def store_monthly(df: pd.DataFrame) -> pd.DataFrame:
