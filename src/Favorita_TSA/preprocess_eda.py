@@ -9,8 +9,8 @@ def create_fact_table():
     df_fact = df_train.copy()
     df_fact["date"] = pd.to_datetime(df_fact["date"])
     df_fact["year"] = df_fact["date"].dt.year
-    df_fact["month"] = df_fact["date"].dt.to_period("M")
-    df_fact["week"] = df_fact["date"].dt.to_period("W")
+    df_fact["month"] = df_fact["date"].dt.to_period("M").dt.start_time
+    df_fact["week"] = df_fact["date"].dt.to_period("W-MON").dt.start_time
     df_fact["dow"] = df_fact["date"].dt.dayofweek
     return df_fact
 
@@ -151,9 +151,10 @@ def save_monthlys():
     save_table(store_item_monthly(df_fact), PreDataset.STORE_ITEM_MONTHLY)
 
 
-# save_dailys()
-# save_weeklys()
-# save_monthlys()
+save_fact_table()
+save_dailys()
+save_weeklys()
+save_monthlys()
 
 
 # Item Level - Daily, Weekly, Monthly Aggregations
