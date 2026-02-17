@@ -1,8 +1,8 @@
 import pandas as pd
 import streamlit as st
 
-from Favorita_TSA.preprocess_eda import load_table
 from Favorita_TSA.utils.dataset import PreDataset
+from Favorita_TSA.utils.preprocess_data import load_table
 
 # ------------------------------------------------------------------
 # PAGE CONFIG

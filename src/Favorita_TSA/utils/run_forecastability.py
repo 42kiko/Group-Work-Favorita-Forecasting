@@ -11,10 +11,10 @@ Aufruf:
     python run_pipelines.py
 """
 
-from Favorita_TSA.preprocess_eda import load_table
 from Favorita_TSA.utils.data_loader import parquet_loader
 from Favorita_TSA.utils.dataset import Dataset, PreDataset
 from Favorita_TSA.utils.forecastability import run_daily_pipeline, run_weekly_pipeline
+from Favorita_TSA.utils.preprocess_data import load_table
 
 FAMILY_EMOJI = {
     "GROCERY": "🥫",

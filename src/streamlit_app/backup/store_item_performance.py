@@ -2,8 +2,8 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from Favorita_TSA.preprocess_eda import load_table
 from Favorita_TSA.utils.dataset import PreDataset
+from Favorita_TSA.utils.preprocess_data import load_table
 
 
 # --------------------------------------------------
