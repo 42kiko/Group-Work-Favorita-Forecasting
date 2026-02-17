@@ -53,9 +53,16 @@ def _aggregate_base_metrics(
     """
     Aggregiert df nach groupby_cols und berechnet Basisstatistiken.
 
-    Gibt zurück:
+    Konvertiert date_col intern nach datetime64, damit first_sale/last_sale
+    immer als Timestamp ankommen - unabhaengig davon ob der Aufrufer
+    Strings oder datetime-Objekte uebergibt.
+
+    Gibt zurueck:
         first_sale, last_sale, periods_sold, total_units, mean_sales, std_sales
     """
+    df = df.copy()
+    df[date_col] = pd.to_datetime(df[date_col])
+
     agg = (
         df.groupby(groupby_cols)
         .agg(
