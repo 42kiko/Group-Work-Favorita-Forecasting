@@ -122,7 +122,7 @@ def render_filters(df: pd.DataFrame, key_prefix: str) -> dict:
             "Min. sales_density",
             min_value=0.0,
             max_value=1.0,
-            value=0.10,
+            value=0.00,
             step=0.01,
             key=f"{key_prefix}_min_density",
         )
