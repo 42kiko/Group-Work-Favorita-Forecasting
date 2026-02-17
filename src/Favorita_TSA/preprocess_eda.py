@@ -174,10 +174,10 @@ def save_monthlys():
     save_table(store_item_monthly(df_fact), PreDataset.STORE_ITEM_MONTHLY)
 
 
-save_fact_table()
-save_dailys()
-save_weeklys()
-save_monthlys()
+# save_fact_table()
+# save_dailys()
+# save_weeklys()
+# save_monthlys()
 
 
 # Item Level - Daily, Weekly, Monthly Aggregations
