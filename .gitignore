@@ -153,11 +153,16 @@ cython_debug/
 .DS_Store
 
 # =====================================
-# Working Data Frames 
+# Working Data Frames
 # =====================================
-/data/processed/preprocessed 
+/data/processed/preprocessed
 
 # =====================================
-# OPEN_AI_KEY File 
+# OPEN_AI_KEY File
 # =====================================
 key.py
+
+# =====================================
+# Warp files
+# =====================================
+warp-skill/
