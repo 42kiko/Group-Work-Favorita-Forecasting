@@ -4,6 +4,8 @@ import pandas as pd
 
 from Favorita_TSA.utils.dataset import Dataset
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 def load_train_csv(path: str | Path) -> pd.DataFrame:
     """
@@ -180,5 +182,6 @@ def parquet_loader(name: Dataset) -> pd.DataFrame:
         dfs = [pd.read_parquet(p) for p in parts]
         return pd.concat(dfs, ignore_index=True)
 
+    path = PROJECT_ROOT / "data" / "processed" / f"{name.value}.parquet"
     # 🔹 Standardfall: einzelne Parquet-Datei
-    return pd.read_parquet(Path(f"data/processed/{name.value}.parquet"))
+    return pd.read_parquet(path)
