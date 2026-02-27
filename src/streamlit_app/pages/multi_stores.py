@@ -1,3 +1,4 @@
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
@@ -10,9 +11,19 @@ df_store_daily = load_table(PreDataset.STORE_DAILY)
 df_store_weekly = load_table(PreDataset.STORE_WEEKLY)
 df_store_monthly = load_table(PreDataset.STORE_MONTHLY)
 
-# Make timeseries columns for plotting
-df_store_weekly["week_ts"] = df_store_weekly["week"].dt.start_time
-df_store_monthly["month_ts"] = df_store_monthly["month"].dt.to_timestamp()
+if "week" in df_store_weekly.columns:
+    if pd.api.types.is_period_dtype(df_store_weekly["week"]):
+        df_store_weekly["week_ts"] = df_store_weekly["week"].dt.start_time
+    else:
+        df_store_weekly["week_ts"] = pd.to_datetime(
+            df_store_weekly["week"], errors="coerce"
+        )
+elif "week_start" in df_store_weekly.columns:
+    df_store_weekly["week_ts"] = pd.to_datetime(
+        df_store_weekly["week_start"], errors="coerce"
+    )
+else:
+    raise ValueError("No week column found (expected 'week' or 'week_start')")
 
 
 store_ids = st.multiselect(
@@ -41,7 +52,7 @@ st.caption("Long-term sales trends indicate growth or decline.")
 # Plotting Monthly
 fig_monthly = px.line(
     df_store_monthly_choice,
-    x="month_ts",
+    x="month",
     y="unit_sales_sum",
     color="store_nbr",
     title="Monthly Sales",
@@ -52,7 +63,7 @@ st.plotly_chart(fig_monthly, use_container_width=True)
 # Plotting Weekly
 fig_weekly = px.line(
     df_store_weekly_choice,
-    x="week_ts",
+    x="week",
     y="unit_sales_sum",
     color="store_nbr",
     title="Weekly Sales",
@@ -133,7 +144,7 @@ st.caption(
 )
 
 df_outliers = df_store_weekly_choice.copy()
-df_outliers = df_outliers.sort_values("week_ts")
+df_outliers = df_outliers.sort_values("week")
 
 df_outliers["rolling_mean"] = df_outliers.groupby("store_nbr")[
     "unit_sales_sum"
@@ -149,7 +160,7 @@ df_outliers["z_score"] = (
 
 fig_outliers = px.scatter(
     df_outliers,
-    x="week_ts",
+    x="week",
     y="unit_sales_sum",
     color=(df_outliers["z_score"].abs() > 3),
     title="Weekly Sales with Outliers (|Z| > 3)",
