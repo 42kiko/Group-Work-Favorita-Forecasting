@@ -7,7 +7,7 @@
 # ------------------------------------------------------------
 
 PYTHON_VERSION := 3.12
-PYTHON_BIN := python$(PYTHON_VERSION)
+PYTHON_BIN := $(shell which python3.12 || which python3)
 
 
 hello:
@@ -96,6 +96,9 @@ venv12:
 	@$(PYTHON_BIN) -m venv .venv
 	@echo "Virtual environment created."
 
+.PHONY: active
+active:
+	@bash -lc "source .venv/bin/activate && exec bash"
 
 run app:
 	streamlit run src/streamlit_app/app.py
