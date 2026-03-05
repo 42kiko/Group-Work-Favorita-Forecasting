@@ -72,7 +72,7 @@ analysis:
 heatmap:
     min: *brand_black
     mid: *brand_bblue
-    max: *brand_goldƒ
+    max: *brand_gold
 
 # Top 20 Categorical Groups
 visualizations:
