@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/kiko/Desktop/github/Group-Work-Favorita-Forecasting/mlruns/228493862614636180/1780261dfe5243cf84f5496d3d7d06f0/artifacts
+end_time: 1772742702664
+entry_point_name: ''
+experiment_id: '228493862614636180'
+lifecycle_stage: active
+run_id: 1780261dfe5243cf84f5496d3d7d06f0
+run_name: victorious-whale-166
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772742702651
+status: 3
+tags: []
+user_id: kiko

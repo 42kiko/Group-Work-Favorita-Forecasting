@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/kiko/Desktop/github/Group-Work-Favorita-Forecasting/mlruns/228493862614636180/171189df7d50499ea7e61b1ca1ad1d0a/artifacts
+end_time: 1772742382126
+entry_point_name: ''
+experiment_id: '228493862614636180'
+lifecycle_stage: active
+run_id: 171189df7d50499ea7e61b1ca1ad1d0a
+run_name: daily_smooth_store25_item115611_season7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772742374294
+status: 3
+tags: []
+user_id: kiko

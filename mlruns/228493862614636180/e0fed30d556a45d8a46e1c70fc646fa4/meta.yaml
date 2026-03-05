@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/kiko/Desktop/github/Group-Work-Favorita-Forecasting/mlruns/228493862614636180/e0fed30d556a45d8a46e1c70fc646fa4/artifacts
+end_time: 1772742710185
+entry_point_name: ''
+experiment_id: '228493862614636180'
+lifecycle_stage: active
+run_id: e0fed30d556a45d8a46e1c70fc646fa4
+run_name: unruly-toad-306
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772742710165
+status: 3
+tags: []
+user_id: kiko

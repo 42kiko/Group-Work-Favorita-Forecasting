@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/kiko/Desktop/github/Group-Work-Favorita-Forecasting/mlruns/228493862614636180/b48bb6b75e974cecba8b1db44f457246/artifacts
+end_time: 1772741677093
+entry_point_name: ''
+experiment_id: '228493862614636180'
+lifecycle_stage: active
+run_id: b48bb6b75e974cecba8b1db44f457246
+run_name: weekly_smooth_store24_item1503844_season52_freqW_modeltheta
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772741677070
+status: 3
+tags: []
+user_id: kiko

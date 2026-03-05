@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/kiko/Desktop/github/Group-Work-Favorita-Forecasting/mlruns/228493862614636180/9c05ad1050634fdb871feb81d2dfcb45/artifacts
+end_time: 1772741677054
+entry_point_name: ''
+experiment_id: '228493862614636180'
+lifecycle_stage: active
+run_id: 9c05ad1050634fdb871feb81d2dfcb45
+run_name: daily_erratic_store44_item103520_season7_freqD_modelsarima
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772741669622
+status: 3
+tags: []
+user_id: kiko

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/kiko/Desktop/github/Group-Work-Favorita-Forecasting/mlruns/228493862614636180/7ab4fe5375c146c69a4cca33c77bb848/artifacts
+end_time: 1772741677102
+entry_point_name: ''
+experiment_id: '228493862614636180'
+lifecycle_stage: active
+run_id: 7ab4fe5375c146c69a4cca33c77bb848
+run_name: spiffy-finch-746
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772741677094
+status: 3
+tags: []
+user_id: kiko
