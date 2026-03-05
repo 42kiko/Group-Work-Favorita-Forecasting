@@ -4,7 +4,7 @@
 
 # Global Theme & UI Colors:
 brand:
-  # LEVEL 1: The Dark Base (0-15%) 
+  # LEVEL 1: The Dark Base (0-15%)
   navy_dark:    &brand_navy    "#0B0E14"  # Deep Black-Blue
   black_rich:   &brand_black   "#111827"  # Pure Dark
   navy_deep:    &brand_dnavy   "#121D2F"  # Midnight Navy
@@ -72,7 +72,7 @@ analysis:
 heatmap:
     min: *brand_black
     mid: *brand_bblue
-    max: *brand_gold
+    max: *brand_goldƒ
 
 # Top 20 Categorical Groups
 visualizations:
