@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/a94b915b4a524e17b5f27e04e3e3ebe4/artifacts
+deleted_time: 1772802813760
+end_time: 1772801055653
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: a94b915b4a524e17b5f27e04e3e3ebe4
+run_name: languid-rook-752
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772801055644
+status: 3
+tags: []
+user_id: patrickhederer

@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/072688d8d3ba42669b1079b0ed0379e4/artifacts
+deleted_time: 1772802813754
+end_time: 1772801055603
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: 072688d8d3ba42669b1079b0ed0379e4
+run_name: angry-pug-236
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772801055594
+status: 3
+tags: []
+user_id: patrickhederer

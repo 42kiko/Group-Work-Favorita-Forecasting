@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/a36788fcbebd43d5b242cd284355b188/artifacts
+end_time: 1772802870009
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: active
+run_id: a36788fcbebd43d5b242cd284355b188
+run_name: daily_smooth_store25_item115611_season7_freqD_modelsarima
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772802864900
+status: 3
+tags: []
+user_id: patrickhederer

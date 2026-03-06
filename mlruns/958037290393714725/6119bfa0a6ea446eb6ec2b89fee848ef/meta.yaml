@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/6119bfa0a6ea446eb6ec2b89fee848ef/artifacts
+end_time: 1772800046274
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: active
+run_id: 6119bfa0a6ea446eb6ec2b89fee848ef
+run_name: daily_erratic_store44_item103520_season7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772800041723
+status: 3
+tags: []
+user_id: patrickhederer

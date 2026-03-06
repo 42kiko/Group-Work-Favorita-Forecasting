@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/2edc9af9e45b46e3813c33506bcad845/artifacts
+deleted_time: 1772802813756
+end_time: 1772801048037
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: 2edc9af9e45b46e3813c33506bcad845
+run_name: traveling-donkey-387
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772801048026
+status: 3
+tags: []
+user_id: patrickhederer

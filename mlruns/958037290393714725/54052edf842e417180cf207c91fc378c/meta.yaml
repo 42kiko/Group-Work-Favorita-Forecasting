@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/54052edf842e417180cf207c91fc378c/artifacts
+deleted_time: 1772802813755
+end_time: 1772801055592
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: 54052edf842e417180cf207c91fc378c
+run_name: weekly_smooth_store24_item1503844_season52_freqW_modeltheta
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1772801055559
+status: 3
+tags: []
+user_id: patrickhederer
