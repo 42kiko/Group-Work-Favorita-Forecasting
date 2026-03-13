@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/b84ed8a10c6d45b48489bbbfc7b4a7f6/artifacts
+deleted_time: 1773417370279
+end_time: 1773417127001
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: b84ed8a10c6d45b48489bbbfc7b4a7f6
+run_name: weekly_erratic_002_theta
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773417126954
+status: 3
+tags: []
+user_id: unknown

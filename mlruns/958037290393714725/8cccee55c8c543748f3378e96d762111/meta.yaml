@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/8cccee55c8c543748f3378e96d762111/artifacts
+deleted_time: 1773417370278
+end_time: 1773417126924
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: 8cccee55c8c543748f3378e96d762111
+run_name: weekly_smooth_002_theta
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773417126878
+status: 3
+tags: []
+user_id: unknown

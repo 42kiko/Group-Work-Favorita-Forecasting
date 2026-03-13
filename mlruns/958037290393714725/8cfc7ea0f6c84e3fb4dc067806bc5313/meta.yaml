@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/patrickhederer/Python Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/8cfc7ea0f6c84e3fb4dc067806bc5313/artifacts
+deleted_time: 1773412564208
+end_time: 1773412146310
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: deleted
+run_id: 8cfc7ea0f6c84e3fb4dc067806bc5313
+run_name: daily_smooth_004_sarima
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1773412128669
+status: 4
+tags: []
+user_id: patrickhederer
