@@ -168,8 +168,6 @@ key.py
 warp-skill/
 
 # =====================================
-# MLflow runs & generated plots
+# Logs
 # =====================================
-mlruns/
-img/mlflow/
 streamlit.log
