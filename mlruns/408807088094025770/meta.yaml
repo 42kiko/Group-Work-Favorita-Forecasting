@@ -1,0 +1,7 @@
+artifact_location: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/408807088094025770
+creation_time: 1774019807598
+experiment_id: '408807088094025770'
+last_update_time: 1774019807598
+lifecycle_stage: active
+name: favorita_sarimax_store_item
+workspace: default

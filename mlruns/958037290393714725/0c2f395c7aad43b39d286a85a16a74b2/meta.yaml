@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/0c2f395c7aad43b39d286a85a16a74b2/artifacts
+end_time: 1774019910124
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: active
+run_id: 0c2f395c7aad43b39d286a85a16a74b2
+run_name: daily_smooth_gs_022_max_p2_max_q3_max_P0_max_Q1_seasonalTrue
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774019907464
+status: 3
+tags: []
+user_id: unknown

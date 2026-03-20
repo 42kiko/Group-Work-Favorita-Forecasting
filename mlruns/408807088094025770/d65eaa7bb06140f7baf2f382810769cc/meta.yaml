@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/d65eaa7bb06140f7baf2f382810769cc/artifacts
+end_time: 1774023958862
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: d65eaa7bb06140f7baf2f382810769cc
+run_name: daily_smooth_006_sarimax
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774023958758
+status: 3
+tags: []
+user_id: patrickhederer

@@ -166,3 +166,10 @@ key.py
 # Warp files
 # =====================================
 warp-skill/
+
+# =====================================
+# MLflow runs & generated plots
+# =====================================
+mlruns/
+img/mlflow/
+streamlit.log

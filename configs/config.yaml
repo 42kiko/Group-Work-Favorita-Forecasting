@@ -37,6 +37,7 @@ models:
 
 mlflow:
   experiment: "favorita_baseline_store_item"
+  sarimax_experiment: "favorita_sarimax_store_item"
 
 holidays:
   country: "Ecuador"
