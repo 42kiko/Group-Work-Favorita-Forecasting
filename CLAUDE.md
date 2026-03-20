@@ -111,3 +111,10 @@ pytest tests/
 
 ## MLflow
 `setup_mlflow()` aus `src/Favorita_TSA/utils/mlflow_utils.py` verwenden — passt Artifact-Pfade automatisch an die aktuelle Maschine an. Nie `mlflow.set_tracking_uri()` direkt mit Windows-Pfaden aufrufen.
+
+## Code-Qualität (Ruff + Black)
+Der Pre-commit-Hook erzwingt ruff + black bei jedem Commit. Code muss von Anfang an konform sein:
+- **Keine EN DASH (`–`) in Docstrings** → immer Hyphen-Minus `-` verwenden (RUF002)
+- **Keine ungenutzten Variablen** — direkt weglassen oder mit `_` prefixen (F841)
+- **Keine ambiguosen Unicode-Zeichen** in Strings oder Docstrings
+- Vor dem Commit: `ruff check src/` und `black --check src/` lokal ausführen
