@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -9,27 +7,15 @@ from statsmodels.tsa.seasonal import STL
 from statsmodels.tsa.stattools import acf
 
 from Favorita_TSA.utils.dataset import PreDataset
+from Favorita_TSA.utils.date_utils import normalize_time_col as _normalize_time_col
+from Favorita_TSA.utils.paths import PREPROCESSED_DIR
 from Favorita_TSA.utils.preprocess_data import load_table
 from Favorita_TSA.viz.color_manager import ColorManager
+from streamlit_app.components.charts import render_plotly
 
 color_manager = ColorManager()
 
 st.set_page_config(layout="wide")
-
-
-# =====================================================
-# Paths (Streamlit-safe)
-# =====================================================
-def project_root() -> Path:
-    # file: src/streamlit_app/pages/store_item_behavior.py
-    return Path(__file__).resolve().parents[3]
-
-
-def read_preprocessed_parquet(filename: str) -> pd.DataFrame:
-    p = project_root() / "data" / "processed" / "preprocessed" / filename
-    if not p.exists():
-        raise FileNotFoundError(f"Missing parquet: {p}")
-    return pd.read_parquet(p)
 
 
 # =====================================================
@@ -38,33 +24,30 @@ def read_preprocessed_parquet(filename: str) -> pd.DataFrame:
 df_daily = load_table(PreDataset.STORE_ITEM_DAILY)
 df_weekly = load_table(PreDataset.STORE_ITEM_WEEKLY)
 
+
 # holiday-enriched parquets
-df_daily_hol = read_preprocessed_parquet("store_item_daily_holiday.parquet")
-df_weekly_hol = read_preprocessed_parquet("store_item_weekly_holiday.parquet")
+def _load_preprocessed(filename: str) -> pd.DataFrame:
+    p = PREPROCESSED_DIR / filename
+    if not p.exists():
+        raise FileNotFoundError(f"Missing parquet: {p}")
+    return pd.read_parquet(p)
+
+
+df_daily_hol = _load_preprocessed("store_item_daily_holiday.parquet")
+df_weekly_hol = _load_preprocessed("store_item_weekly_holiday.parquet")
 
 
 # =====================================================
 # Helpers
 # =====================================================
+
+
 def to_dense_index(ts: pd.Series, freq: str) -> pd.Series:
     if ts.empty:
         return ts
     ts = ts.sort_index()
     full_idx = pd.date_range(start=ts.index.min(), end=ts.index.max(), freq=freq)
     return ts.reindex(full_idx, fill_value=0.0)
-
-
-def _normalize_time_col(d: pd.DataFrame, col: str) -> pd.DataFrame:
-    out = d.copy()
-    if col not in out.columns:
-        return out
-
-    if pd.api.types.is_period_dtype(out[col]):
-        out[col] = out[col].dt.start_time
-
-    out[col] = pd.to_datetime(out[col], errors="coerce").dt.normalize()
-    out = out.dropna(subset=[col])
-    return out
 
 
 def get_series_dense(
@@ -401,7 +384,7 @@ fig = plot_decomposition_with_holidays(
     resid,
     title=f"{level} decomposition (dense incl. zeros) · store={store} · item={item}",
 )
-st.plotly_chart(fig, use_container_width=True)
+render_plotly(fig)
 
 if show_sparse and not ts_sparse.empty:
     st.subheader("🧾 Sparse series (sales periods only)")

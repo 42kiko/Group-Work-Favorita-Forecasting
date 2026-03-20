@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(start cmd:*)",
+      "Bash(start http://localhost:8501)",
+      "Bash(python -m streamlit run src/streamlit_app/app.py)",
+      "Bash(python -m pip install mlflow)",
+      "Bash(python -m pip install statsforecast)",
+      "Bash(python -m pip install -e \".[dev]\")",
+      "Bash(python -m pip show numpy numba statsforecast ydata-profiling)",
+      "Bash(python -c \"import numpy; print\\(numpy.__version__\\)\")",
+      "Bash(python -c \"import numpy; print\\(''numpy:'', numpy.__version__\\)\")",
+      "Bash(python -c \"import numba; print\\(''numba:'', numba.__version__\\)\")",
+      "Bash(python -m pip show numpy numba statsforecast)",
+      "Bash(python -c \"from statsforecast import StatsForecast; print\\(''statsforecast OK''\\)\")",
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(python -m pytest tests/test_imports.py -v)",
+      "Bash(python -c \":*)",
+      "Bash(powershell -Command \":*)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(start_streamlit.bat)",
+      "Bash(python -m ruff check . --output-format=concise)",
+      "Bash(python -m ruff format --check .)",
+      "Bash(python -m ruff format .)",
+      "Bash(python -m ruff check . --fix)",
+      "Bash(python -m ruff check .)",
+      "Bash(python -m black --check .)",
+      "Bash(python -m black .)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Kiko\\.claude\\projects\\c--Users-Kiko-Desktop-Code-tutoring-Group-Work-Favorita-Forecasting\\memory"
+    ]
+  }
+}

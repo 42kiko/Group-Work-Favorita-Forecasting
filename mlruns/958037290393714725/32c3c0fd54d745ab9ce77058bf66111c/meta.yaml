@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Kiko/Desktop/Code/tutoring/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/32c3c0fd54d745ab9ce77058bf66111c/artifacts
+end_time: 1774008457641
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: active
+run_id: 32c3c0fd54d745ab9ce77058bf66111c
+run_name: daily_smooth_040_sarima
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774008450937
+status: 4
+tags: []
+user_id: unknown

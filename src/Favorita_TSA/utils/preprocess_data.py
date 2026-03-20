@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+
 import pandas as pd
 
 from Favorita_TSA.utils.data_loader import df_to_parquet, parquet_loader, parquet_save
 from Favorita_TSA.utils.dataset import Dataset, PreDataset
+from Favorita_TSA.utils.paths import PREPROCESSED_DIR
 
 
 def create_fact_table():
@@ -71,18 +76,15 @@ def save_table(df: pd.DataFrame, name: PreDataset) -> None:
 
 
 def parquet_save_prepocessed(df: pd.DataFrame, name: PreDataset) -> None:
-    df_to_parquet(
-        df,
-        f"data/processed/preprocessed/{name.value}.parquet",
-    )
+    df_to_parquet(df, PREPROCESSED_DIR / f"{name.value}.parquet")
 
 
 def load_fact_table():
-    return pd.read_parquet("data/processed/preprocessed/fact_table.parquet")
+    return pd.read_parquet(PREPROCESSED_DIR / "fact_table.parquet")
 
 
 def load_table(name: PreDataset) -> pd.DataFrame:
-    return pd.read_parquet(f"data/processed/preprocessed/{name.value}.parquet")
+    return pd.read_parquet(PREPROCESSED_DIR / f"{name.value}.parquet")
 
 
 def aggregate(
@@ -96,61 +98,29 @@ ALL_METRICS_UNIT_SALES = {
 }
 
 
-# store_daily = aggregate(df_fact, ["store_nbr", "date"], metrics)
-# item_daily = aggregate(df_fact, ["item_nbr", "date"], metrics)
-# store_item_daily = aggregate(df_fact, ["store_nbr", "item_nbr", "date"], metrics)
+def _make_aggregator(group_keys: list[str]) -> Callable[[pd.DataFrame], pd.DataFrame]:
+    """Factory: erzeugt eine Aggregationsfunktion für die gegebenen Gruppierungs-Spalten."""
+
+    def aggregator(df: pd.DataFrame) -> pd.DataFrame:
+        return aggregate(df, group_keys, ALL_METRICS_UNIT_SALES)
+
+    return aggregator
 
 
-def agg_daily(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["date"], ALL_METRICS_UNIT_SALES)
-
-
-def agg_weekly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["week"], ALL_METRICS_UNIT_SALES)
-
-
-def agg_monthly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["month"], ALL_METRICS_UNIT_SALES)
-
-
-def store_daily(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["store_nbr", "date"], ALL_METRICS_UNIT_SALES)
-
-
-def item_daily(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["item_nbr", "date"], ALL_METRICS_UNIT_SALES)
-
-
-def store_item_daily(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["store_nbr", "item_nbr", "date"], ALL_METRICS_UNIT_SALES)
-
-
-def store_weekly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["store_nbr", "week"], ALL_METRICS_UNIT_SALES)
-
-
-def item_weekly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["item_nbr", "week"], ALL_METRICS_UNIT_SALES)
-
-
-def store_item_weekly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(
-        df,
-        ["store_nbr", "item_nbr", "year_iso", "week", "week_start"],
-        ALL_METRICS_UNIT_SALES,
-    )
-
-
-def store_monthly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["store_nbr", "month"], ALL_METRICS_UNIT_SALES)
-
-
-def item_monthly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["item_nbr", "month"], ALL_METRICS_UNIT_SALES)
-
-
-def store_item_monthly(df: pd.DataFrame) -> pd.DataFrame:
-    return aggregate(df, ["store_nbr", "item_nbr", "month"], ALL_METRICS_UNIT_SALES)
+agg_daily = _make_aggregator(["date"])
+agg_weekly = _make_aggregator(["week"])
+agg_monthly = _make_aggregator(["month"])
+store_daily = _make_aggregator(["store_nbr", "date"])
+item_daily = _make_aggregator(["item_nbr", "date"])
+store_item_daily = _make_aggregator(["store_nbr", "item_nbr", "date"])
+store_weekly = _make_aggregator(["store_nbr", "week"])
+item_weekly = _make_aggregator(["item_nbr", "week"])
+store_item_weekly = _make_aggregator(
+    ["store_nbr", "item_nbr", "year_iso", "week", "week_start"]
+)
+store_monthly = _make_aggregator(["store_nbr", "month"])
+item_monthly = _make_aggregator(["item_nbr", "month"])
+store_item_monthly = _make_aggregator(["store_nbr", "item_nbr", "month"])
 
 
 def save_dailys():

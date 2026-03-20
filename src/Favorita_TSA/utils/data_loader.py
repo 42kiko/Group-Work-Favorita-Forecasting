@@ -3,8 +3,13 @@ from pathlib import Path
 import pandas as pd
 
 from Favorita_TSA.utils.dataset import Dataset
+from Favorita_TSA.utils.paths import PREPROCESSED_DIR, PROCESSED_DIR, RAW_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# Parquet-Splitting Konstanten
+_TARGET_MB = 99
+_SAMPLE_ROWS = 200_000
+_SHRINK_FACTOR = 0.98
+_BYTES_PER_MB = 1024 * 1024
 
 
 def load_train_csv(path: str | Path) -> pd.DataFrame:
@@ -35,12 +40,6 @@ def df_to_parquet(df: pd.DataFrame, parquet_path: str | Path) -> None:
     df.to_parquet(parquet_path, index=False)
 
 
-def df_to_parquet_packages(df: pd.DataFrame, parquet_path: str | Path) -> None:
-    """Speichert einen Dataframe als Parquet-Datei."""
-
-    df.to_parquet(parquet_path, index=False)
-
-
 def split_parquet_to_packages(
     df: pd.DataFrame, name: Dataset, target_root: str | Path
 ) -> None:
@@ -56,15 +55,14 @@ def split_parquet_to_packages(
         print(f"📦 Keine Daten für: {name.value}")
         return
 
-    target_bytes = int(99.0 * 1024 * 1024)
-    hard_limit_bytes = int(99.0 * 1024 * 1024)
-    s_rows = min(200_000, total_rows)
+    target_bytes = int(_TARGET_MB * _BYTES_PER_MB)
+    s_rows = min(_SAMPLE_ROWS, total_rows)
     s_start = max(0, (total_rows // 2) - (s_rows // 2))
     tmp = target_dir / "_sample_tmp.parquet"
     df.iloc[s_start : s_start + s_rows].to_parquet(tmp, index=False)
     bytes_per_row = max(1.0, tmp.stat().st_size / s_rows)
     tmp.unlink()
-    rows_est = max(1, int(int(99.0 * 1024 * 1024) / bytes_per_row))
+    rows_est = max(1, int(target_bytes / bytes_per_row))
 
     start = 0
     part = 0
@@ -76,10 +74,10 @@ def split_parquet_to_packages(
             start=start,
             end=end_guess,
             out_path=out_path,
-            hard_limit_bytes=hard_limit_bytes,
+            hard_limit_bytes=target_bytes,
         )
 
-        actual_mb = written_bytes / (1024**2)
+        actual_mb = written_bytes / _BYTES_PER_MB
         print(f"   ✅ {name.value} Part {part}: {actual_mb:.2f} MB")
         if written_bytes > 0:
             ratio = target_bytes / written_bytes
@@ -116,8 +114,7 @@ def _write_part_with_hard_limit(
         if rows <= 1:
             return end, size
 
-        # verkleinern mit Sicherheitsfaktor
-        shrink_ratio = (hard_limit_bytes / size) * 0.98
+        shrink_ratio = (hard_limit_bytes / size) * _SHRINK_FACTOR
         new_rows = max(1, int(rows * shrink_ratio))
         end = start + new_rows
 
@@ -125,49 +122,32 @@ def _write_part_with_hard_limit(
 def save_tables_to_parquet() -> None:
     """
     Geht die Liste der Tabellen durch und speichert sie als Parquet-Pakete.
-    Train landet in ../data/train/, andere in ../data/name_pkg/.
+    Train landet in data/processed/train/, andere in data/processed/name.parquet.
     """
-
-    #    for element in DATA:
-    #       if element == "train":
-    #           split_parquet_to_packages(
-    #               load_train_csv(f"data/raw/{element}.csv"),
-    #               "train",
-    #               f"data/processed/{element}.parquet",
-    #           )
-    #       else:
-    #          df_to_parquet(
-    #              load_df(f"data/raw/{element}.csv"), f"data/processed/{element}.parquet"
-    #          )
-
     for element in Dataset:
         if element == Dataset.TRAIN:
             split_parquet_to_packages(
-                load_train_csv(f"data/raw/{element.value}.csv"),
+                load_train_csv(RAW_DIR / f"{element.value}.csv"),
                 Dataset.TRAIN,
-                f"data/processed/{element.value}",
+                PROCESSED_DIR / element.value,
             )
         else:
             df_to_parquet(
-                load_df(f"data/raw/{element.value}.csv"),
-                f"data/processed/{element.value}.parquet",
+                load_df(RAW_DIR / f"{element.value}.csv"),
+                PROCESSED_DIR / f"{element.value}.parquet",
             )
 
 
 def parquet_save(df: pd.DataFrame, name: str) -> None:
-    df_to_parquet(
-        df,
-        f"data/processed/preprocessed/{name}.parquet",
-    )
+    df_to_parquet(df, PREPROCESSED_DIR / f"{name}.parquet")
 
 
 def parquet_loader(name: Dataset) -> pd.DataFrame:
     if name not in Dataset:
         raise ValueError(f"{name} ist kein gültiger Datensatz")
 
-    # 🔹 Spezialfall: train besteht aus mehreren Parts
     if name == Dataset.TRAIN:
-        base_dir = Path("data/processed") / Dataset.TRAIN.value
+        base_dir = PROCESSED_DIR / Dataset.TRAIN.value
 
         print("BASE_DIR", base_dir)
 
@@ -182,6 +162,4 @@ def parquet_loader(name: Dataset) -> pd.DataFrame:
         dfs = [pd.read_parquet(p) for p in parts]
         return pd.concat(dfs, ignore_index=True)
 
-    path = PROJECT_ROOT / "data" / "processed" / f"{name.value}.parquet"
-    # 🔹 Standardfall: einzelne Parquet-Datei
-    return pd.read_parquet(path)
+    return pd.read_parquet(PROCESSED_DIR / f"{name.value}.parquet")

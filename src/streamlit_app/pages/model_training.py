@@ -13,25 +13,22 @@ Voraussetzung: Die Forecastability-Matrizen wurden bereits berechnet
 
 from __future__ import annotations
 
-import importlib
 import os
-from pathlib import Path
 
 import mlflow
 import pandas as pd
 import streamlit as st
 
-import Favorita_TSA.models.baseline as _baseline_mod
-from Favorita_TSA.models.data_preparation import build_dataframes
-from Favorita_TSA.viz.ploty_theme import set_plotly_theme
-
-# Force reload so Streamlit always uses the latest baseline.py without a server restart.
-importlib.reload(_baseline_mod)
-from Favorita_TSA.models.baseline import (  # noqa: E402
+from Favorita_TSA.models.baseline import (
     aggregate_to_weekly,
     run_baseline_plotly,
     run_grid_search_cv,
 )
+from Favorita_TSA.models.data_preparation import build_dataframes
+from Favorita_TSA.utils.config import cfg
+from Favorita_TSA.utils.mlflow_utils import setup_mlflow
+from Favorita_TSA.utils.paths import IMG_DIR, MLRUNS_DIR
+from Favorita_TSA.viz.ploty_theme import set_plotly_theme
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Seiten-Konfiguration
@@ -40,12 +37,9 @@ from Favorita_TSA.models.baseline import (  # noqa: E402
 st.set_page_config(layout="wide", page_title="Model Training")
 set_plotly_theme()
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-os.chdir(PROJECT_ROOT)
+os.chdir(MLRUNS_DIR.parent.parent)  # PROJECT_ROOT
 
-MLRUNS_DIR = PROJECT_ROOT / "mlruns"
-IMG_DIR = PROJECT_ROOT / "img" / "mlflow"
-EXPERIMENT = "favorita_baseline_store_item"
+EXPERIMENT = cfg.mlflow.experiment
 
 PATTERN_KEY_MAP = {
     "daily_smooth": "smooth_daily",
@@ -54,35 +48,12 @@ PATTERN_KEY_MAP = {
     "weekly_erratic": "erratic_weekly",
 }
 
+_pe = cfg.defaults.pattern_examples
 PATTERN_DEFAULTS: dict[str, dict] = {
-    "daily_smooth": {
-        "store": 25,
-        "item": 115611,
-        "season": 7,
-        "test_weeks": 4,
-        "model": "sarima",
-    },
-    "daily_erratic": {
-        "store": 44,
-        "item": 103520,
-        "season": 7,
-        "test_weeks": 4,
-        "model": "sarima",
-    },
-    "weekly_smooth": {
-        "store": 24,
-        "item": 1503844,
-        "season": 52,
-        "test_weeks": 52,
-        "model": "theta",
-    },
-    "weekly_erratic": {
-        "store": 51,
-        "item": 1239986,
-        "season": 52,
-        "test_weeks": 52,
-        "model": "theta",
-    },
+    "daily_smooth": vars(_pe.daily_smooth),
+    "daily_erratic": vars(_pe.daily_erratic),
+    "weekly_smooth": vars(_pe.weekly_smooth),
+    "weekly_erratic": vars(_pe.weekly_erratic),
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -101,7 +72,7 @@ def get_dataframe(pattern: str) -> pd.DataFrame:
 
 @st.cache_data(ttl=15, show_spinner=False)
 def load_mlflow_runs() -> pd.DataFrame:
-    mlflow.set_tracking_uri(f"file://{MLRUNS_DIR.as_posix()}")
+    setup_mlflow(EXPERIMENT)
     try:
         runs = mlflow.search_runs(
             experiment_names=[EXPERIMENT],
@@ -151,7 +122,7 @@ st.divider()
 
 st.subheader("Daten")
 
-col_pat, col_store, col_item, col_gap = st.columns(4)
+col_pat, col_store, col_item, col_gap, col_trim = st.columns(5)
 
 with col_pat:
     pattern = st.selectbox(
@@ -189,9 +160,23 @@ with col_gap:
         value=5,
         step=1,
         format="%d%%",
-        help="Anteil fehlender Tage, ab dem Interpolation durch Dropna ersetzt wird (nur Daily)",
+        help="Anteil fehlender Tage (Nulltage), ab dem Dropna statt 0-Auffüllung verwendet wird (nur Daily)",
     )
     gap_threshold = gap_pct / 100
+
+with col_trim:
+    trim_days = st.slider(
+        "Trim Zero-Phase",
+        min_value=0,
+        max_value=90,
+        value=cfg.models.trailing_zero_min_days,
+        step=5,
+        format="%d Tage",
+        disabled=is_weekly,
+        help="Entfernt den letzten langen Null-Block am Ende der Zeitreihe. "
+        "0 = deaktiviert. Nur für Daily-Muster relevant.",
+    )
+trailing_zero_min_days = int(trim_days) if is_daily else 0
 
 st.divider()
 
@@ -239,12 +224,13 @@ if model_type == "sarima":
 
     # Max-Grenzen
     c1, c2, c3, c4, c5, c6 = st.columns(6)
+    _a = cfg.models.autoarima
     with c1:
         max_p = st.number_input(
             "max_p",
             min_value=0,
             max_value=10,
-            value=3,
+            value=_a.max_p,
             help="Max. AR-Ordnung (nicht-saisonal)",
         )
     with c2:
@@ -252,7 +238,7 @@ if model_type == "sarima":
             "max_q",
             min_value=0,
             max_value=10,
-            value=3,
+            value=_a.max_q,
             help="Max. MA-Ordnung (nicht-saisonal)",
         )
     with c3:
@@ -260,23 +246,31 @@ if model_type == "sarima":
             "max_d",
             min_value=0,
             max_value=3,
-            value=2,
+            value=_a.max_d,
             help="Max. Differenzierungsordnung",
         )
     with c4:
         max_P = st.number_input(
-            "max_P", min_value=0, max_value=5, value=2, help="Max. saisonale AR-Ordnung"
+            "max_P",
+            min_value=0,
+            max_value=5,
+            value=_a.max_P,
+            help="Max. saisonale AR-Ordnung",
         )
     with c5:
         max_Q = st.number_input(
-            "max_Q", min_value=0, max_value=5, value=2, help="Max. saisonale MA-Ordnung"
+            "max_Q",
+            min_value=0,
+            max_value=5,
+            value=_a.max_Q,
+            help="Max. saisonale MA-Ordnung",
         )
     with c6:
         max_D = st.number_input(
             "max_D",
             min_value=0,
             max_value=2,
-            value=1,
+            value=_a.max_D,
             help="Max. saisonale Differenzierungsordnung",
         )
 
@@ -287,7 +281,7 @@ if model_type == "sarima":
             "start_p",
             min_value=0,
             max_value=10,
-            value=2,
+            value=_a.start_p,
             help="Startwert der AR-Gittersuche (nicht-saisonal)",
         )
     with s2:
@@ -295,7 +289,7 @@ if model_type == "sarima":
             "start_q",
             min_value=0,
             max_value=10,
-            value=2,
+            value=_a.start_q,
             help="Startwert der MA-Gittersuche (nicht-saisonal)",
         )
     with s3:
@@ -303,7 +297,7 @@ if model_type == "sarima":
             "start_P",
             min_value=0,
             max_value=5,
-            value=1,
+            value=_a.start_P,
             help="Startwert der saisonalen AR-Gittersuche",
         )
     with s4:
@@ -311,7 +305,7 @@ if model_type == "sarima":
             "start_Q",
             min_value=0,
             max_value=5,
-            value=1,
+            value=_a.start_Q,
             help="Startwert der saisonalen MA-Gittersuche",
         )
 
@@ -388,8 +382,7 @@ with run_col:
 # ── Training ─────────────────────────────────────────────────────────────────
 
 if run_button:
-    mlflow.set_tracking_uri(f"file://{MLRUNS_DIR.as_posix()}")
-    mlflow.set_experiment(EXPERIMENT)
+    setup_mlflow(EXPERIMENT)
 
     with st.spinner(
         f"Trainiere {model_type.upper()} auf {pattern} (store={store}, item={item}) ..."
@@ -415,6 +408,7 @@ if run_button:
                 test_weeks=int(test_weeks),
                 model_type=model_type,
                 gap_threshold=float(gap_threshold),
+                trailing_zero_min_days=trailing_zero_min_days,
                 model_params=model_params,
                 img_dir=IMG_DIR,
             )
@@ -462,17 +456,18 @@ with st.expander("Grid Search CV — AutoARIMA", expanded=False):
     )
 
     gs_col1, gs_col2 = st.columns(2)
+    _a = cfg.models.autoarima
     with gs_col1:
         gs_max_p = st.multiselect(
             "max_p",
             options=[0, 1, 2, 3, 4],
-            default=[1, 2, 3],
+            default=_a.grid_p,
             help="Nicht-saisonale AR-Ordnungen",
         )
         gs_max_q = st.multiselect(
             "max_q",
             options=[0, 1, 2, 3, 4],
-            default=[1, 2, 3],
+            default=_a.grid_q,
             help="Nicht-saisonale MA-Ordnungen",
         )
         gs_seasonal = st.checkbox(
@@ -482,13 +477,13 @@ with st.expander("Grid Search CV — AutoARIMA", expanded=False):
         gs_max_P = st.multiselect(
             "max_P (saisonal)",
             options=[0, 1, 2, 3],
-            default=[0, 1],
+            default=_a.grid_P,
             help="Saisonale AR-Ordnungen",
         )
         gs_max_Q = st.multiselect(
             "max_Q (saisonal)",
             options=[0, 1, 2, 3],
-            default=[0, 1],
+            default=_a.grid_Q,
             help="Saisonale MA-Ordnungen",
         )
 
@@ -498,7 +493,7 @@ with st.expander("Grid Search CV — AutoARIMA", expanded=False):
             "CV Folds",
             min_value=2,
             max_value=5,
-            value=3,
+            value=cfg.models.cv_folds,
             help="Anzahl der Walk-Forward Folds",
         )
     with gs_cv_col2:
@@ -537,8 +532,7 @@ with st.expander("Grid Search CV — AutoARIMA", expanded=False):
             "max_Q": gs_max_Q or [0],
             "seasonal": [gs_seasonal],
         }
-        mlflow.set_tracking_uri(f"file://{MLRUNS_DIR.as_posix()}")
-        mlflow.set_experiment(EXPERIMENT)
+        setup_mlflow(EXPERIMENT)
 
         _gs_progress = st.progress(0.0, text="Vorbereitung …")
         _gs_status = st.empty()
@@ -566,6 +560,7 @@ with st.expander("Grid Search CV — AutoARIMA", expanded=False):
                 n_windows=int(gs_n_windows),
                 param_grid=_gs_param_grid,
                 gap_threshold=float(gap_threshold),
+                trailing_zero_min_days=trailing_zero_min_days,
                 progress_callback=_gs_callback,
             )
             st.session_state["gs_results"] = gs_results

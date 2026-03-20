@@ -34,14 +34,15 @@ from pathlib import Path
 
 import pandas as pd
 
+from Favorita_TSA.utils.paths import METRICS_DIR
 from Favorita_TSA.utils.preprocess_data import load_fact_table
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths to the forecastability matrices
 # ─────────────────────────────────────────────────────────────────────────────
 
-DAILY_METRICS_PATH = Path("data/metrics/store_item_daily_metrics.parquet")
-WEEKLY_METRICS_PATH = Path("data/metrics/store_item_weekly_metrics.parquet")
+DAILY_METRICS_PATH = METRICS_DIR / "store_item_daily_metrics.parquet"
+WEEKLY_METRICS_PATH = METRICS_DIR / "store_item_weekly_metrics.parquet"
 
 # Columns that identify a unique store-item combination
 _KEY_COLS = ["store_nbr", "item_nbr"]

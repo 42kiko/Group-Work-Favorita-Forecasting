@@ -150,7 +150,9 @@ if __name__ == "__main__":
     )  # Fallback if top20 not in YAML
     for i, col in enumerate(top_colors[:5]):
         fig.add_trace(
-            go.Scatter(x=[1, 2], y=[i, i + 1], line={"color": col}, name=f"Color {i+1}")
+            go.Scatter(
+                x=[1, 2], y=[i, i + 1], line={"color": col}, name=f"Color {i + 1}"
+            )
         )
 
     apply_modern_theme(fig)

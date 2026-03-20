@@ -144,9 +144,9 @@ def fix_and_add_holiday_features(
     n_regular = len(df) - n_holidays - n_pre - n_post
 
     print("\n📊 Ergebnis:")
-    print(f"   Holidays:     {n_holidays:,} Tage ({n_holidays/len(df)*100:.1f}%)")
-    print(f"   Pre-Holiday:  {n_pre:,} Tage ({n_pre/len(df)*100:.1f}%)")
-    print(f"   Post-Holiday: {n_post:,} Tage ({n_post/len(df)*100:.1f}%)")
-    print(f"   Regular:      {n_regular:,} Tage ({n_regular/len(df)*100:.1f}%)")
+    print(f"   Holidays:     {n_holidays:,} Tage ({n_holidays / len(df) * 100:.1f}%)")
+    print(f"   Pre-Holiday:  {n_pre:,} Tage ({n_pre / len(df) * 100:.1f}%)")
+    print(f"   Post-Holiday: {n_post:,} Tage ({n_post / len(df) * 100:.1f}%)")
+    print(f"   Regular:      {n_regular:,} Tage ({n_regular / len(df) * 100:.1f}%)")
 
     return df

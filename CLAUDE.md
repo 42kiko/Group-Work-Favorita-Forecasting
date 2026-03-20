@@ -1,93 +1,113 @@
-# CLAUDE.md
+# Agent Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+You're working inside the **WAT framework** (Workflows, Agents, Tools). This architecture separates concerns so that probabilistic AI handles reasoning while deterministic code handles execution. That separation is what makes this system reliable.
 
-## Project Overview
+## The WAT Architecture
 
-Time series forecasting project for Favorita supermarket stores, implementing demand pattern classification (Croston/Syntetos-Boylan), baseline statistical models (SARIMA, Theta), and an interactive Streamlit dashboard. Authors: Agus, Kiko, Patrick.
+**Layer 1: Workflows (The Instructions)**
+- Markdown SOPs stored in `workflows/`
+- Each workflow defines the objective, required inputs, which tools to use, expected outputs, and how to handle edge cases
+- Written in plain language, the same way you'd brief someone on your team
 
-## Setup & Common Commands
+**Layer 2: Agents (The Decision-Maker)**
+- This is your role. You're responsible for intelligent coordination.
+- Read the relevant workflow, run tools in the correct sequence, handle failures gracefully, and ask clarifying questions when needed
+- You connect intent to execution without trying to do everything yourself
+- Example: If you need to pull data from a website, don't attempt it directly. Read `workflows/scrape_website.md`, figure out the required inputs, then execute `tools/scrape_single_site.py`
 
+**Layer 3: Tools (The Execution)**
+- Python scripts in `tools/` that do the actual work
+- API calls, data transformations, file operations, database queries
+- Credentials and API keys are stored in `.env`
+- These scripts are consistent, testable, and fast
+
+**Why this matters:** When AI tries to handle every step directly, accuracy drops fast. If each step is 90% accurate, you're down to 59% success after just five steps. By offloading execution to deterministic scripts, you stay focused on orchestration and decision-making where you excel.
+
+## How to Operate
+
+**1. Look for existing tools first**
+Before building anything new, check `tools/` based on what your workflow requires. Only create new scripts when nothing exists for that task.
+
+**2. Learn and adapt when things fail**
+When you hit an error:
+- Read the full error message and trace
+- Fix the script and retest (if it uses paid API calls or credits, check with me before running again)
+- Document what you learned in the workflow (rate limits, timing quirks, unexpected behavior)
+- Example: You get rate-limited on an API, so you dig into the docs, discover a batch endpoint, refactor the tool to use it, verify it works, then update the workflow so this never happens again
+
+**3. Keep workflows current**
+Workflows should evolve as you learn. When you find better methods, discover constraints, or encounter recurring issues, update the workflow. That said, don't create or overwrite workflows without asking unless I explicitly tell you to. These are your instructions and need to be preserved and refined, not tossed after one use.
+
+## The Self-Improvement Loop
+
+Every failure is a chance to make the system stronger:
+1. Identify what broke
+2. Fix the tool
+3. Verify the fix works
+4. Update the workflow with the new approach
+5. Move on with a more robust system
+
+This loop is how the framework improves over time.
+
+## File Structure
+
+**What goes where:**
+- **Deliverables**: Final outputs go to cloud services (Google Sheets, Slides, etc.) where I can access them directly
+- **Intermediates**: Temporary processing files that can be regenerated
+
+**Directory layout:**
+```
+.tmp/           # Temporary files (scraped data, intermediate exports). Regenerated as needed.
+tools/          # Python scripts for deterministic execution
+workflows/      # Markdown SOPs defining what to do and how
+.env            # API keys and environment variables (NEVER store secrets anywhere else)
+credentials.json, token.json  # Google OAuth (gitignored)
+```
+
+**Core principle:** Local files are just for processing. Anything I need to see or use lives in cloud services. Everything in `.tmp/` is disposable.
+
+## Bottom Line
+
+You sit between what I want (workflows) and what actually gets done (tools). Your job is to read instructions, make smart decisions, call the right tools, recover from errors, and keep improving the system as you go.
+
+Stay pragmatic. Stay reliable. Keep learning.
+
+---
+
+# Favorita Forecasting — Project-Specific Instructions
+
+## Sprache
+Antworte immer auf Deutsch. Technische Begriffe und Code-Bezeichner bleiben auf Englisch.
+
+## Projekt-Setup (für neue Entwickler)
 ```bash
-# Full dev environment setup
-make setup-dev          # creates .venv, installs deps, activates pre-commit hooks
-
-# Or step by step
-python3 -m venv .venv
-source .venv/bin/activate   # macOS/Linux
+# 1. Abhängigkeiten installieren
 pip install -e ".[dev]"
-pre-commit install
-```
 
-```bash
-# Run tests
+# 2. Streamlit starten
+python -m streamlit run src/streamlit_app/app.py > streamlit.log 2>&1
+
+# 3. Tests ausführen
 pytest tests/
-
-# Run a single test
-pytest tests/test_forecastability.py::test_classify_demand_pattern
-
-# Launch Streamlit dashboard
-streamlit run src/streamlit_app/app.py
-# or
-make run app
-
-# Linting & formatting
-ruff check src/          # lint
-ruff format src/         # format (or use black)
 ```
 
-## Architecture
+## Debugging-Strategie
+- Streamlit-Fehler stehen in `streamlit.log` (Projekt-Root) — immer dort zuerst nachschauen
+- Fehler eigenständig finden, fixen und verifizieren — User erst informieren wenn die App vollständig läuft
+- Workflow: Log lesen → Fix implementieren → `pytest tests/` ausführen → Streamlit neu starten → Log prüfen → User informieren
 
-### Source Layout (`src/`)
+## Testing-Strategie
+- Nach Library-Upgrades oder Refactorings: kritische API-Aufrufe mit Smoke-Tests absichern (nicht nur Imports testen)
+- Beispiel: Nach MLflow-Update `mlflow.set_experiment()` direkt aufrufen und testen — nicht nur `import mlflow` prüfen
+- Test-Command: `pytest tests/` — alle Tests müssen grün sein
 
-**`Favorita_TSA/`** — main Python package:
-- `utils/forecastability.py` — core demand classification logic (ADI, CV², Croston/Syntetos-Boylan thresholds: ADI=1.32, CV²=0.49); classifies store-item combinations into Smooth/Erratic/Intermittent/Lumpy
-- `utils/data_loader.py` — parquet I/O with caching
-- `utils/preprocess_data.py` — fact table creation with temporal features (DOW, ISO week, month, year)
-- `models/data_preparation.py` — splits fact table by demand pattern into 4 DataFrames (smooth/erratic × daily/weekly)
-- `features/holidays.py` / `preprocess/holiday_parquets.py` — holiday feature engineering
-- `viz/` — Plotly dark-mode theme, color management from `configs/COLORS.yaml`
+## Wichtige Pfade
+- Streamlit-App: `src/streamlit_app/app.py`
+- Modelle: `src/Favorita_TSA/models/`
+- Konfiguration: `configs/config.yaml`
+- MLflow-Runs: `mlruns/` (auto-portabel via `setup_mlflow()` in `src/Favorita_TSA/utils/mlflow_utils.py`)
+- Plots: `img/mlflow/`
+- Logs: `streamlit.log`
 
-**`streamlit_app/`** — multi-page dashboard:
-- `app.py` — entry point, full-screen dark layout
-- `pages/forecastability_store_item.py` — forecastability matrix
-- `pages/store_item_behavior.py` — individual store-item time series
-- `pages/multi_stores.py` — cross-store comparison
-
-### Data Pipeline
-
-Raw CSV → `fact_table.parquet` (874 MB) → aggregated parquets (daily/weekly/monthly at store, item, store-item levels) → forecastability metrics → baseline model inputs.
-
-All processed data lives in `data/processed/preprocessed/`; forecastability metrics in `data/metrics/`; baseline results in `data/baseline_results/`.
-
-### MLflow Experiment Tracking
-
-MLflow uses a **local filesystem backend** at `mlruns/`. Notebooks log to experiment `"favorita_baseline_store_item"`.
-
-```python
-mlflow.set_tracking_uri(f"file://{MLRUNS_DIR.as_posix()}")
-mlflow.set_experiment("favorita_baseline_store_item")
-```
-
-### Key Concepts
-
-**Demand Pattern Classification (Croston/Syntetos-Boylan):**
-- ADI (Average Demand Interval) = n_periods / n_nonzero
-- CV² (Coefficient of Variation Squared) = (σ/μ)²
-- Smooth: ADI ≤ 1.32 AND CV² ≤ 0.49
-- Erratic: ADI ≤ 1.32 AND CV² > 0.49
-- Intermittent: ADI > 1.32 AND CV² ≤ 0.49
-- Lumpy: ADI > 1.32 AND CV² > 0.49
-
-Models are trained and evaluated separately per demand pattern.
-
-### Notebooks
-
-Notebooks in `notebooks/` are the primary workspace for EDA and modeling. Key ones:
-- `baseline_modeling_sarima.ipynb` / `baseline_modeling_theta.ipynb` — MLflow-tracked baseline models
-- `02_eda_prepocess.ipynb` — main EDA and preprocessing (57 MB, heavy)
-- `pattern_recognition.ipynb` — demand pattern analysis
-
-### Code Quality
-
-Pre-commit hooks run `ruff` (with auto-fix) and `black` on every commit. Line length: 88 chars. Ruff rules: E, F, I, B, UP, SIM, C4, ARG, RUF.
+## MLflow
+`setup_mlflow()` aus `src/Favorita_TSA/utils/mlflow_utils.py` verwenden — passt Artifact-Pfade automatisch an die aktuelle Maschine an. Nie `mlflow.set_tracking_uri()` direkt mit Windows-Pfaden aufrufen.

@@ -107,6 +107,51 @@ def _detect_gaps(
     }
 
 
+def _trim_trailing_zero_phase(ts: pd.DataFrame, min_days: int = 30) -> pd.DataFrame:
+    """Schneidet die Zeitreihe am Beginn des letzten langen Null-Blocks ab.
+
+    Findet ALLE zusammenhängenden Null-Blöcke >= min_days und schneidet am
+    Start des LETZTEN solchen Blocks ab. Alles danach (inkl. isolierter
+    Einzelverkäufe nach der langen Nullphase) wird entfernt.
+
+    Beispiel: [...Verkäufe...][305 Nulltage][2 Verkäufe] → Ende vor den 305 Nulltagen.
+    """
+    if min_days <= 0 or ts.empty:
+        return ts
+
+    y = ts["y"].values
+    n = len(y)
+
+    # Alle Zero-Blöcke durchlaufen, letzten langen merken
+    last_long_block_start = None
+    i = 0
+    while i < n:
+        if y[i] == 0:
+            j = i
+            while j < n and y[j] == 0:
+                j += 1
+            if j - i >= min_days:
+                last_long_block_start = i
+            i = j
+        else:
+            i += 1
+
+    if last_long_block_start is None:
+        return ts  # kein langer Null-Block → kein Trimming
+
+    cutoff_date = (
+        ts["ds"].iloc[last_long_block_start - 1].date()
+        if last_long_block_start > 0
+        else ts["ds"].iloc[0].date()
+    )
+    removed = n - last_long_block_start
+    print(
+        f"   Trimming at last zero-block (>= {min_days} days): "
+        f"{removed} rows removed, new end={cutoff_date}"
+    )
+    return ts.iloc[:last_long_block_start].reset_index(drop=True)
+
+
 def _safe_param_key(k: str) -> str:
     """
     Map a statsforecast model-param key to a macOS-safe MLflow param key.
@@ -154,7 +199,8 @@ def load_and_prepare(
     store: int,
     item: int,
     freq: str = "D",
-    gap_threshold: float = 0.05,
+    gap_threshold: float = 0.05,  # noqa: ARG001  # kept for API compatibility
+    trailing_zero_min_days: int = 0,
 ) -> pd.DataFrame:
     """
     Filter a store-item from the fact table and return a statsforecast-ready
@@ -167,8 +213,7 @@ def load_and_prepare(
       that has no ``store_nbr`` column -> uses as-is.
 
     Gap handling (daily only):
-      - < gap_threshold fraction of missing dates  -> linear interpolation
-      - >= gap_threshold                            -> dropna (too sparse)
+      - Alle fehlenden Tage werden mit 0 aufgefüllt (fehlender Tag = kein Umsatz)
 
     Parameters
     ----------
@@ -231,22 +276,17 @@ def load_and_prepare(
         gap_info = _detect_gaps(ts, date_col="ds", freq="D")
         if gap_info["has_gaps"]:
             pct = gap_info["pct_missing"]
-            if pct < gap_threshold:
-                full_range = pd.date_range(ts["ds"].min(), ts["ds"].max(), freq="D")
-                ts_cont = ts.set_index("ds").reindex(full_range).reset_index()
-                ts_cont = ts_cont.rename(columns={"index": "ds"})
-                ts_cont["y"] = ts_cont["y"].interpolate(method="linear")
-                ts_cont["unique_id"] = ts_cont["unique_id"].ffill().bfill()
-                print(
-                    f"   Filled {gap_info['n_missing']} daily gaps with linear interpolation"
-                )
-                ts = ts_cont
-            else:
-                print(
-                    f"   {gap_info['n_missing']} gaps ({pct:.1%}) exceed threshold "
-                    f"({gap_threshold:.0%}) -- dropping NaN rows"
-                )
-                ts = ts.dropna(subset=["y"])
+            full_range = pd.date_range(ts["ds"].min(), ts["ds"].max(), freq="D")
+            ts_cont = ts.set_index("ds").reindex(full_range).reset_index()
+            ts_cont = ts_cont.rename(columns={"index": "ds"})
+            ts_cont["y"] = ts_cont["y"].fillna(0)
+            ts_cont["unique_id"] = ts_cont["unique_id"].ffill().bfill()
+            print(
+                f"   Filled {gap_info['n_missing']} daily gaps ({pct:.1%}) with 0 (zero-sales days)"
+            )
+            ts = ts_cont
+        if trailing_zero_min_days > 0:
+            ts = _trim_trailing_zero_phase(ts, min_days=trailing_zero_min_days)
     else:
         print("   Weekly data ready (no gap filling needed)")
 
@@ -352,6 +392,7 @@ def run_baseline_plotly(
     test_weeks: int = 4,
     model_type: str = "sarima",
     gap_threshold: float = 0.05,
+    trailing_zero_min_days: int = 0,
     model_params: dict | None = None,
     img_dir: Path | str | None = None,
     mlflow_experiment: str | None = None,
@@ -416,7 +457,7 @@ def run_baseline_plotly(
         fig is the Plotly figure (caller decides whether to call fig.show()
             or st.plotly_chart(fig)).
     """
-    print(f"\n{'='*70}\n{pattern.upper()} | {model_type.upper()}\n{'='*70}")
+    print(f"\n{'=' * 70}\n{pattern.upper()} | {model_type.upper()}\n{'=' * 70}")
 
     experiment_name = mlflow_experiment or "favorita_baseline_store_item"
     mlflow.set_experiment(experiment_name)
@@ -438,7 +479,14 @@ def run_baseline_plotly(
 
     try:
         # 1. Prepare
-        ts = load_and_prepare(df, store, item, freq=freq, gap_threshold=gap_threshold)
+        ts = load_and_prepare(
+            df,
+            store,
+            item,
+            freq=freq,
+            gap_threshold=gap_threshold,
+            trailing_zero_min_days=trailing_zero_min_days,
+        )
 
         # 2. Split
         train, test = train_test_split(ts, test_weeks=test_weeks)
@@ -632,6 +680,7 @@ def run_baseline_plotly(
             "item": item,
             "season_length": season_length,
             "test_weeks": test_weeks,
+            "trailing_zero_min_days": trailing_zero_min_days,
             **{f"mp_{_safe_param_key(k)}": v for k, v in model_params.items()},
         }
         metrics = {
@@ -686,6 +735,7 @@ def run_grid_search_cv(
     step_size: int | None = None,
     param_grid: dict | None = None,
     gap_threshold: float = 0.05,
+    trailing_zero_min_days: int = 0,
     mlflow_experiment: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> pd.DataFrame:
@@ -750,7 +800,14 @@ def run_grid_search_cv(
     _exp = mlflow.get_experiment_by_name(experiment_name)
 
     # Prepare time series once — reused for every combo
-    ts = load_and_prepare(df, store, item, freq=freq, gap_threshold=gap_threshold)
+    ts = load_and_prepare(
+        df,
+        store,
+        item,
+        freq=freq,
+        gap_threshold=gap_threshold,
+        trailing_zero_min_days=trailing_zero_min_days,
+    )
 
     keys = list(param_grid.keys())
     combos = list(product(*[param_grid[k] for k in keys]))

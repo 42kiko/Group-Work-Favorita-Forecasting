@@ -1,9 +1,11 @@
-import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from Favorita_TSA.utils.config import cfg
 from Favorita_TSA.utils.dataset import PreDataset
+from Favorita_TSA.utils.date_utils import normalize_time_col
 from Favorita_TSA.utils.preprocess_data import load_table
+from streamlit_app.components.charts import render_plotly
 
 st.title("Store Analysis")
 
@@ -11,17 +13,12 @@ df_store_daily = load_table(PreDataset.STORE_DAILY)
 df_store_weekly = load_table(PreDataset.STORE_WEEKLY)
 df_store_monthly = load_table(PreDataset.STORE_MONTHLY)
 
-if "week" in df_store_weekly.columns:
-    if pd.api.types.is_period_dtype(df_store_weekly["week"]):
-        df_store_weekly["week_ts"] = df_store_weekly["week"].dt.start_time
-    else:
-        df_store_weekly["week_ts"] = pd.to_datetime(
-            df_store_weekly["week"], errors="coerce"
-        )
-elif "week_start" in df_store_weekly.columns:
-    df_store_weekly["week_ts"] = pd.to_datetime(
-        df_store_weekly["week_start"], errors="coerce"
-    )
+if "week_start" in df_store_weekly.columns:
+    df_store_weekly = normalize_time_col(df_store_weekly, "week_start")
+    df_store_weekly["week_ts"] = df_store_weekly["week_start"]
+elif "week" in df_store_weekly.columns:
+    df_store_weekly = normalize_time_col(df_store_weekly, "week")
+    df_store_weekly["week_ts"] = df_store_weekly["week"]
 else:
     raise ValueError("No week column found (expected 'week' or 'week_start')")
 
@@ -29,7 +26,7 @@ else:
 store_ids = st.multiselect(
     "Select stores",
     options=sorted(df_store_daily["store_nbr"].unique()),
-    default=[1],  # optional
+    default=[cfg.ui.default_store],
 )
 
 if not store_ids:
@@ -57,7 +54,7 @@ fig_monthly = px.line(
     color="store_nbr",
     title="Monthly Sales",
 )
-st.plotly_chart(fig_monthly, use_container_width=True)
+render_plotly(fig_monthly)
 
 
 # Plotting Weekly
@@ -68,7 +65,7 @@ fig_weekly = px.line(
     color="store_nbr",
     title="Weekly Sales",
 )
-st.plotly_chart(fig_weekly, use_container_width=True)
+render_plotly(fig_weekly)
 
 
 # Plotting Daily
@@ -79,7 +76,7 @@ fig_daily = px.line(
     color="store_nbr",
     title="Daily Sales",
 )
-st.plotly_chart(fig_daily, use_container_width=True)
+render_plotly(fig_daily)
 
 st.header("Store Stability")
 
@@ -104,7 +101,7 @@ fig_stability = px.bar(
     color="store_nbr",
     title="Sales Variability (Coefficient of Variation)",
 )
-st.plotly_chart(fig_stability, use_container_width=True)
+render_plotly(fig_stability)
 
 
 st.header("Seasonality")
@@ -135,7 +132,7 @@ fig_seasonality = px.bar(
     },
     title="Average Sales by Day of Week",
 )
-st.plotly_chart(fig_seasonality, use_container_width=True)
+render_plotly(fig_seasonality)
 
 st.header("Outliers")
 
@@ -146,26 +143,29 @@ st.caption(
 df_outliers = df_store_weekly_choice.copy()
 df_outliers = df_outliers.sort_values("week")
 
+_rw = cfg.analysis.rolling_window
+_rp = cfg.analysis.rolling_min_periods
 df_outliers["rolling_mean"] = df_outliers.groupby("store_nbr")[
     "unit_sales_sum"
-].transform(lambda s: s.rolling(8, min_periods=4).mean())
+].transform(lambda s: s.rolling(_rw, min_periods=_rp).mean())
 
 df_outliers["rolling_std"] = df_outliers.groupby("store_nbr")[
     "unit_sales_sum"
-].transform(lambda s: s.rolling(8, min_periods=4).std())
+].transform(lambda s: s.rolling(_rw, min_periods=_rp).std())
 
 df_outliers["z_score"] = (
     df_outliers["unit_sales_sum"] - df_outliers["rolling_mean"]
 ) / df_outliers["rolling_std"]
 
+_z = cfg.analysis.zscore_threshold
 fig_outliers = px.scatter(
     df_outliers,
     x="week",
     y="unit_sales_sum",
-    color=(df_outliers["z_score"].abs() > 3),
-    title="Weekly Sales with Outliers (|Z| > 3)",
+    color=(df_outliers["z_score"].abs() > _z),
+    title=f"Weekly Sales with Outliers (|Z| > {_z})",
 )
-st.plotly_chart(fig_outliers, use_container_width=True)
+render_plotly(fig_outliers)
 
 
 st.markdown(
@@ -198,7 +198,9 @@ store_id = st.selectbox(
     sorted(df_si["store_nbr"].unique()),
 )
 
-top_n = st.slider("Top N items", 5, 30, 10)
+top_n = st.slider(
+    "Top N items", cfg.ui.top_n_min, cfg.ui.top_n_max, cfg.ui.top_n_default
+)
 
 df_store_items = df_si[df_si["store_nbr"] == store_id]
 
@@ -232,4 +234,4 @@ fig_item_season = px.line(
     color="item_nbr",
     title="Weekly Seasonality - Top Items",
 )
-st.plotly_chart(fig_item_season, use_container_width=True)
+render_plotly(fig_item_season)

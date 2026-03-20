@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Kiko/Desktop/Code/tutoring/Group-Work-Favorita-Forecasting/mlruns/958037290393714725/2291ae23bb4e4e8bbdac9c2c89cb8148/artifacts
+end_time: 1774009754767
+entry_point_name: ''
+experiment_id: '958037290393714725'
+lifecycle_stage: active
+run_id: 2291ae23bb4e4e8bbdac9c2c89cb8148
+run_name: daily_smooth_gs_030_max_p3_max_q2_max_P0_max_Q1_seasonalTrue
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774009751115
+status: 3
+tags: []
+user_id: unknown

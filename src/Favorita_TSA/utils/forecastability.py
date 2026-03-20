@@ -19,16 +19,17 @@ import pandas as pd
 # =============================================================================
 # Pfade
 # =============================================================================
+from Favorita_TSA.utils.config import cfg
+from Favorita_TSA.utils.paths import METRICS_DIR
 
-OUTPUT_DIR = Path("data/metrics")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
-DAILY_METRICS_PATH = OUTPUT_DIR / "store_item_daily_metrics.parquet"
-WEEKLY_METRICS_PATH = OUTPUT_DIR / "store_item_weekly_metrics.parquet"
+DAILY_METRICS_PATH = METRICS_DIR / "store_item_daily_metrics.parquet"
+WEEKLY_METRICS_PATH = METRICS_DIR / "store_item_weekly_metrics.parquet"
 
-# Croston-Schwellwerte
-ADI_THRESHOLD = 1.32
-CV2_THRESHOLD = 0.49
+# Croston-Schwellwerte (aus config.yaml)
+ADI_THRESHOLD = cfg.croston.adi_threshold
+CV2_THRESHOLD = cfg.croston.cv2_threshold
 
 PATTERN_EMOJI = {
     "Smooth": "🟢",

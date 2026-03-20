@@ -7,10 +7,15 @@ Liest fertige Metriken direkt aus Parquet - keine Berechnungen hier.
 Voraussetzung: run_pipelines.py wurde einmalig ausgeführt.
 """
 
+from __future__ import annotations
+
+from typing import Literal
+
 import pandas as pd
 import streamlit as st
 
 from Favorita_TSA.utils.forecastability import DAILY_METRICS_PATH, WEEKLY_METRICS_PATH
+from streamlit_app.components.filters import render_pattern_filter
 
 # =============================================================================
 # Seiten-Konfiguration
@@ -92,47 +97,8 @@ def load_weekly_metrics() -> pd.DataFrame:
 
 
 def render_filters(df: pd.DataFrame, key_prefix: str) -> dict:
-    """Rendert Filter-Widgets und gibt gewählte Werte zurück.
-
-    key_prefix verhindert doppelte Widget-IDs wenn die Funktion
-    für mehrere Tabs aufgerufen wird (z.B. 'daily', 'weekly').
-    """
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        fam_filter = st.multiselect(
-            "Family",
-            sorted(df["family"].dropna().unique()),
-            key=f"{key_prefix}_family",
-        )
-    with col2:
-        pattern_filter = st.multiselect(
-            "Demand Type",
-            ["Smooth", "Erratic", "Intermittent", "Lumpy"],
-            key=f"{key_prefix}_pattern",
-        )
-    with col3:
-        perishable_filter = st.selectbox(
-            "Perishable",
-            ["All", True, False],
-            key=f"{key_prefix}_perishable",
-        )
-    with col4:
-        min_density = st.slider(
-            "Min. sales_density",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.00,
-            step=0.01,
-            key=f"{key_prefix}_min_density",
-        )
-
-    return {
-        "family": fam_filter,
-        "pattern": pattern_filter,
-        "perishable": perishable_filter,
-        "min_density": min_density,
-    }
+    """Delegiert an die zentrale Filter-Komponente."""
+    return render_pattern_filter(df, key_prefix)
 
 
 def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
@@ -226,52 +192,27 @@ def render_pattern_distribution(df: pd.DataFrame) -> None:
 # =============================================================================
 
 
-def render_daily_tab() -> None:
-    st.subheader("📅 Store · Item · Daily - Forecastability")
+def render_aggregation_tab(granularity: Literal["daily", "weekly"]) -> None:
+    """Rendert den Forecastability-Tab für daily oder weekly Granularität."""
+    is_daily = granularity == "daily"
+    icon = "📅" if is_daily else "📆"
+    label = "Daily" if is_daily else "Weekly"
+    loader = load_daily_metrics if is_daily else load_weekly_metrics
+    display_cols = DISPLAY_COLS_DAILY if is_daily else DISPLAY_COLS_WEEKLY
+
+    st.subheader(f"{icon} Store · Item · {label} - Forecastability")
 
     try:
-        df = load_daily_metrics()
+        df = loader()
     except FileNotFoundError:
         st.error(
             "⚠️ Keine Daten gefunden. Bitte zuerst `python run_pipelines.py` ausführen."
         )
         return
 
-    filters = render_filters(df, key_prefix="daily")
-
+    filters = render_filters(df, key_prefix=granularity)
     df_view = apply_filters(df, filters)
-
-    # Nur Spalten anzeigen, die auch wirklich existieren
-    cols = [c for c in DISPLAY_COLS_DAILY if c in df_view.columns]
-
-    st.data_editor(
-        df_view[cols].sort_values("total_units", ascending=False),
-        use_container_width=True,
-        hide_index=True,
-        disabled=cols,
-    )
-
-    render_summary_row(df_view)
-    st.divider()
-    render_pattern_distribution(df_view)
-
-
-def render_weekly_tab() -> None:
-    st.subheader("📆 Store · Item · Weekly - Forecastability")
-
-    try:
-        df = load_weekly_metrics()
-    except FileNotFoundError:
-        st.error(
-            "⚠️ Keine Daten gefunden. Bitte zuerst `python run_pipelines.py` ausführen."
-        )
-        return
-
-    filters = render_filters(df, key_prefix="weekly")
-
-    df_view = apply_filters(df, filters)
-
-    cols = [c for c in DISPLAY_COLS_WEEKLY if c in df_view.columns]
+    cols = [c for c in display_cols if c in df_view.columns]
 
     st.data_editor(
         df_view[cols].sort_values("total_units", ascending=False),
@@ -296,10 +237,10 @@ def main() -> None:
     tab_daily, tab_weekly = st.tabs(["📅 Daily", "📆 Weekly"])
 
     with tab_daily:
-        render_daily_tab()
+        render_aggregation_tab("daily")
 
     with tab_weekly:
-        render_weekly_tab()
+        render_aggregation_tab("weekly")
 
 
 if __name__ == "__main__":
