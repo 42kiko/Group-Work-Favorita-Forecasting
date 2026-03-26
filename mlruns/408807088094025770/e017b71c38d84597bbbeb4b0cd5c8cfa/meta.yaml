@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Kiko/Desktop/Code/tutoring/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/e017b71c38d84597bbbeb4b0cd5c8cfa/artifacts
+end_time: 1774549927386
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: e017b71c38d84597bbbeb4b0cd5c8cfa
+run_name: daily_smooth_sarimax_fs_06_s6_is_payday
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774549924521
+status: 3
+tags: []
+user_id: unknown
