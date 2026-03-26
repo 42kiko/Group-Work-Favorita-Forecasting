@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/b8d80e6d333046b8b9c67c5712aaf9ee/artifacts
+end_time: 1774543673149
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: b8d80e6d333046b8b9c67c5712aaf9ee
+run_name: daily_smooth_sarimax_fs_046_Hol+Cal+Tra+Sto
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774543657332
+status: 3
+tags: []
+user_id: unknown

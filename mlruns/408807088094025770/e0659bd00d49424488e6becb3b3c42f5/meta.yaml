@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/e0659bd00d49424488e6becb3b3c42f5/artifacts
+end_time: 1774543776969
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: e0659bd00d49424488e6becb3b3c42f5
+run_name: daily_smooth_sarimax_fs_054_Hol+Oil+Tra+Sto
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774543764964
+status: 3
+tags: []
+user_id: unknown

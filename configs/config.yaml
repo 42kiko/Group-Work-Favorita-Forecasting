@@ -34,6 +34,13 @@ models:
     grid_q: [1, 2, 3]
     grid_P: [0, 1]
     grid_Q: [0, 1]
+  sarimax:
+    grid_p: [0, 1, 2]
+    grid_d: [0, 1]
+    grid_q: [0, 1, 2]
+    grid_P: [0, 1]
+    grid_D: [0, 1]
+    grid_Q: [0, 1]
 
 mlflow:
   experiment: "favorita_baseline_store_item"

@@ -1,10 +1,10 @@
 """
 sarimax_model.py
 
-Interaktive Streamlit-Seite für SARIMAX-Modellierung mit exogenen Features.
+Interaktive Streamlit-Seite fuer SARIMAX-Modellierung mit exogenen Features.
 Manuelle Einstellung aller ARIMA-Parameter (p,d,q)(P,D,Q,s).
-Feature-Gruppen können per Checkbox selektiert werden.
-Tägliche/wöchentliche Features werden entsprechend aggregiert.
+Feature-Gruppen koennen per Checkbox selektiert werden.
+Taegliche/woechentliche Features werden entsprechend aggregiert.
 
 Voraussetzung:
   - data/metrics/*.parquet vorhanden (Forecastability-Matrizen)
@@ -20,7 +20,11 @@ import pandas as pd
 import streamlit as st
 
 from Favorita_TSA.features.sarima_features import load_sarimax_segment
-from Favorita_TSA.models.sarimax import run_sarimax_plotly
+from Favorita_TSA.models.sarimax import (
+    run_sarimax_feature_search,
+    run_sarimax_grid_search,
+    run_sarimax_plotly,
+)
 from Favorita_TSA.utils.config import cfg
 from Favorita_TSA.utils.mlflow_utils import setup_mlflow
 from Favorita_TSA.utils.paths import IMG_DIR, MLRUNS_DIR
@@ -46,7 +50,7 @@ PATTERN_DEFAULTS: dict[str, dict] = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Feature-Gruppen (Name → Liste der Spalten)
+# Feature-Gruppen (Name -> Liste der Spalten)
 # ─────────────────────────────────────────────────────────────────────────────
 
 FEATURE_GROUPS: dict[str, list[str]] = {
@@ -58,7 +62,7 @@ FEATURE_GROUPS: dict[str, list[str]] = {
         "oil_price_pct_change",
     ],
     "Calendar": [
-        "is_weekend",  # nur täglich
+        "is_weekend",  # nur taeglich
         "is_payday",
         "is_month_start",
         "is_month_end",
@@ -76,10 +80,83 @@ FEATURE_GROUPS: dict[str, list[str]] = {
 
 
 @st.cache_data(
-    show_spinner="Lade und enriche Segment-Daten (einmalig, kann ~60 s dauern) …"
+    show_spinner="Lade und enriche Segment-Daten (einmalig, kann ~60 s dauern) ..."
 )
 def _load_segment(pattern: str) -> pd.DataFrame:
     return load_sarimax_segment(pattern)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _load_gs_from_mlflow(
+    pattern: str, store_nbr: int, item_nbr: int, cv_tag: str
+) -> pd.DataFrame | None:
+    """Laedt vorhandene Grid-Search- oder Feature-Search-Ergebnisse aus MLflow."""
+    setup_mlflow(EXPERIMENT)
+    try:
+        runs = mlflow.search_runs(
+            experiment_names=[EXPERIMENT],
+            filter_string=(
+                f"tags.cv = '{cv_tag}' "
+                f"and params.pattern = '{pattern}' "
+                f"and params.store = '{store_nbr}' "
+                f"and params.item = '{item_nbr}'"
+            ),
+            order_by=["metrics.cv_mae_mean ASC"],
+        )
+    except Exception:
+        return None
+
+    if runs.empty:
+        return None
+
+    if cv_tag == "grid_search":
+        param_cols = {
+            "params.p": "p",
+            "params.d": "d",
+            "params.q": "q",
+            "params.s_p": "P",
+            "params.s_d": "D",
+            "params.s_q": "Q",
+        }
+        result = pd.DataFrame()
+        for mlflow_col, col_name in param_cols.items():
+            if mlflow_col in runs.columns:
+                result[col_name] = pd.to_numeric(runs[mlflow_col], errors="coerce")
+        if "metrics.cv_mae_mean" in runs.columns:
+            result["cv_mae_mean"] = runs["metrics.cv_mae_mean"]
+        if "metrics.cv_mae_std" in runs.columns:
+            result["cv_mae_std"] = runs["metrics.cv_mae_std"]
+        result["run_id"] = runs["run_id"]
+        result = result.dropna(subset=["cv_mae_mean"]).reset_index(drop=True)
+        if result.empty:
+            return None
+        result["best"] = False
+        result.loc[0, "best"] = True
+        return result
+
+    if cv_tag == "feature_search":
+        result = pd.DataFrame()
+        if "params.fs_step" in runs.columns:
+            result["step"] = pd.to_numeric(runs["params.fs_step"], errors="coerce")
+        if "params.feature_cols" in runs.columns:
+            result["feature_set"] = runs["params.feature_cols"]
+        if "params.n_exog_features" in runs.columns:
+            result["n_features"] = pd.to_numeric(
+                runs["params.n_exog_features"], errors="coerce"
+            )
+        if "metrics.cv_mae_mean" in runs.columns:
+            result["cv_mae_mean"] = runs["metrics.cv_mae_mean"]
+        if "metrics.cv_mae_std" in runs.columns:
+            result["cv_mae_std"] = runs["metrics.cv_mae_std"]
+        result["run_id"] = runs["run_id"]
+        result = result.dropna(subset=["cv_mae_mean"]).reset_index(drop=True)
+        if result.empty:
+            return None
+        result["best"] = False
+        result.loc[0, "best"] = True
+        return result
+
+    return None
 
 
 @st.cache_data(ttl=15, show_spinner=False)
@@ -124,7 +201,7 @@ def _load_mlflow_runs() -> pd.DataFrame:
 
 st.title("SARIMAX Model")
 st.caption(
-    "Manuelle SARIMA-Parameter + auswählbare exogene Features — "
+    "Manuelle SARIMA-Parameter + auswaehlbare exogene Features - "
     "alle Runs werden in MLflow und img/mlflow/ gespeichert."
 )
 
@@ -134,7 +211,7 @@ st.divider()
 
 st.subheader("Daten")
 
-col_pat, col_store, col_item, col_test, col_trim = st.columns(5)
+col_pat, col_store, col_item, col_test, col_trim, col_season = st.columns(6)
 
 with col_pat:
     pattern = st.selectbox(
@@ -146,6 +223,7 @@ with col_pat:
 defaults = PATTERN_DEFAULTS[pattern]
 is_daily = "daily" in pattern
 is_weekly = not is_daily
+_default_season = defaults["season"]
 
 with col_store:
     store = st.number_input(
@@ -183,19 +261,352 @@ with col_trim:
         format="%d Tage",
         disabled=is_weekly,
         help="Entfernt den letzten langen Null-Block am Ende der Zeitreihe. "
-        "0 = deaktiviert. Nur für Daily-Muster relevant.",
+        "0 = deaktiviert. Nur fuer Daily-Muster relevant.",
     )
 trailing_zero_min_days = int(trim_days) if is_daily else 0
 
+with col_season:
+    s_val = st.slider(
+        "s (Season)",
+        min_value=1,
+        max_value=52,
+        value=_default_season,
+        help="Saisonalitaets-Periode: 7 fuer taeglich, 52 fuer woechentlich",
+    )
+
 st.divider()
 
-# ── Zeile 2: SARIMAX Parameter ───────────────────────────────────────────────
+# ── Vorhandene Grid-Search-Ergebnisse aus MLflow laden ────────────────────────
+
+_gs_key = f"sarimax_gs_{pattern}_{store}_{item}"
+_fs_key = f"sarimax_fs_{pattern}_{store}_{item}"
+
+if "sarimax_gs_results" not in st.session_state:
+    _cached_gs = _load_gs_from_mlflow(pattern, int(store), int(item), "grid_search")
+    if _cached_gs is not None:
+        st.session_state["sarimax_gs_results"] = _cached_gs
+
+if "sarimax_fs_results" not in st.session_state:
+    _cached_fs = _load_gs_from_mlflow(pattern, int(store), int(item), "feature_search")
+    if _cached_fs is not None:
+        st.session_state["sarimax_fs_results"] = _cached_fs
+
+# ── Grid Search CV ───────────────────────────────────────────────────────────
+
+with st.expander("Grid Search CV - SARIMAX", expanded=False):
+    st.caption(
+        "Stufe 1 testet alle (p,d,q)(P,D,Q)-Kombinationen mit Walk-Forward-CV. "
+        "Stufe 2 fuehrt Forward Stepwise Feature Selection mit den besten "
+        "Parametern durch (einzelne Features, nicht Gruppen). "
+        "Beide Stufen sind unabhaengig voneinander startbar."
+    )
+
+    _sx = cfg.models.sarimax
+    gs_col1, gs_col2 = st.columns(2)
+    with gs_col1:
+        gs_p = st.multiselect(
+            "p (AR)",
+            options=[0, 1, 2, 3, 4, 5],
+            default=_sx.grid_p,
+            help="Nicht-saisonale AR-Ordnungen",
+        )
+        gs_d = st.multiselect(
+            "d (Differenzierung)",
+            options=[0, 1, 2],
+            default=_sx.grid_d,
+            help="Differenzierungsordnungen",
+        )
+        gs_q = st.multiselect(
+            "q (MA)",
+            options=[0, 1, 2, 3, 4, 5],
+            default=_sx.grid_q,
+            help="Nicht-saisonale MA-Ordnungen",
+        )
+    with gs_col2:
+        gs_P = st.multiselect(
+            "P (saisonal AR)",
+            options=[0, 1, 2, 3],
+            default=_sx.grid_P,
+            help="Saisonale AR-Ordnungen",
+        )
+        gs_D = st.multiselect(
+            "D (saisonal Diff.)",
+            options=[0, 1, 2],
+            default=_sx.grid_D,
+            help="Saisonale Differenzierungsordnungen",
+        )
+        gs_Q = st.multiselect(
+            "Q (saisonal MA)",
+            options=[0, 1, 2, 3],
+            default=_sx.grid_Q,
+            help="Saisonale MA-Ordnungen",
+        )
+
+    gs_cv_col1, gs_cv_col2, gs_cv_col3 = st.columns(3)
+    with gs_cv_col1:
+        gs_n_windows = st.slider(
+            "CV Folds",
+            min_value=2,
+            max_value=5,
+            value=cfg.models.cv_folds,
+            help="Anzahl der Walk-Forward Folds",
+        )
+    with gs_cv_col2:
+        _default_horizon = int(test_weeks) * (7 if is_daily else 1)
+        gs_horizon = st.number_input(
+            "Horizon (Perioden)",
+            min_value=1,
+            value=_default_horizon,
+            help="Forecast-Horizont je Fold in Perioden (Tage oder Wochen)",
+        )
+    with gs_cv_col3:
+        gs_n_combos = (
+            len(gs_p or [1])
+            * len(gs_d or [1])
+            * len(gs_q or [1])
+            * len(gs_P or [0])
+            * len(gs_D or [0])
+            * len(gs_Q or [0])
+        )
+        st.metric("Kombinationen (Stufe 1)", gs_n_combos)
+
+    if gs_n_combos * gs_n_windows > 500:
+        st.warning(
+            f"{gs_n_combos} Kombinationen x {gs_n_windows} Folds = "
+            f"{gs_n_combos * gs_n_windows} Fits - das kann lange dauern."
+        )
+
+    # ── Zwei separate Buttons ──────────────────────────────────────────────
+    _gs_btn_col, _fs_btn_col, _ = st.columns([1, 1, 2])
+
+    with _gs_btn_col:
+        gs_run = st.button(
+            "Stufe 1: Parameter-Search", type="secondary", use_container_width=True
+        )
+    with _fs_btn_col:
+        _has_gs_for_fs = (
+            "sarimax_gs_results" in st.session_state
+            and not st.session_state["sarimax_gs_results"].empty
+        )
+        fs_run = st.button(
+            "Stufe 2: Feature-Search",
+            type="secondary",
+            use_container_width=True,
+            disabled=not _has_gs_for_fs,
+            help=(
+                "Forward Stepwise Selection ueber einzelne Features "
+                "mit den besten Parametern aus Stufe 1"
+                if _has_gs_for_fs
+                else "Zuerst Stufe 1 ausfuehren"
+            ),
+        )
+
+    # ── Stufe 1 ausfuehren ────────────────────────────────────────────────
+    if gs_run:
+        _gs_param_grid = {
+            "p": gs_p or [1],
+            "d": gs_d or [1],
+            "q": gs_q or [1],
+            "P": gs_P or [0],
+            "D": gs_D or [0],
+            "Q": gs_Q or [0],
+        }
+        setup_mlflow(EXPERIMENT)
+
+        _gs_progress = st.progress(0.0, text="Stufe 1: Vorbereitung ...")
+        _gs_status = st.empty()
+
+        def _gs_callback(done: int, total: int) -> None:
+            _gs_progress.progress(
+                done / total, text=f"Stufe 1: Kombination {done}/{total}"
+            )
+            _gs_status.caption(f"Stufe 1: {done}/{total} abgeschlossen")
+
+        try:
+            _gs_df = _load_segment(pattern)
+            gs_results = run_sarimax_grid_search(
+                df=_gs_df,
+                pattern=pattern,
+                store=int(store),
+                item=int(item),
+                freq="D" if is_daily else "W",
+                season_length=int(s_val),
+                horizon=int(gs_horizon),
+                n_windows=int(gs_n_windows),
+                param_grid=_gs_param_grid,
+                feature_cols=[],
+                trailing_zero_min_days=trailing_zero_min_days,
+                progress_callback=_gs_callback,
+            )
+            st.session_state["sarimax_gs_results"] = gs_results
+            _load_mlflow_runs.clear()
+            _load_gs_from_mlflow.clear()
+            _gs_progress.progress(1.0, text="Stufe 1: Fertig!")
+        except Exception as _exc:
+            st.error(f"Stufe 1 Fehler: {_exc}")
+            st.exception(_exc)
+
+    # ── Stufe 2 ausfuehren ────────────────────────────────────────────────
+    if fs_run and _has_gs_for_fs:
+        _best_gs = st.session_state["sarimax_gs_results"]
+        _best_row = _best_gs[_best_gs["best"]].iloc[0]
+        _best_order = (int(_best_row["p"]), int(_best_row["d"]), int(_best_row["q"]))
+        _best_seasonal = (
+            int(_best_row["P"]),
+            int(_best_row["D"]),
+            int(_best_row["Q"]),
+            int(s_val),
+        )
+        setup_mlflow(EXPERIMENT)
+
+        _fs_progress = st.progress(0.0, text="Stufe 2: Feature-Suche ...")
+        _fs_status = st.empty()
+
+        def _fs_callback(done: int, total: int, msg: str) -> None:
+            _fs_progress.progress(
+                min(done / max(total, 1), 1.0),
+                text=f"Stufe 2: {msg} ({done}/{total})",
+            )
+            _fs_status.caption(f"Stufe 2: {done}/{total} - {msg}")
+
+        try:
+            _fs_df = _load_segment(pattern)
+            fs_results = run_sarimax_feature_search(
+                df=_fs_df,
+                pattern=pattern,
+                store=int(store),
+                item=int(item),
+                freq="D" if is_daily else "W",
+                season_length=int(s_val),
+                horizon=int(gs_horizon),
+                n_windows=int(gs_n_windows),
+                order=_best_order,
+                seasonal_order=_best_seasonal,
+                trailing_zero_min_days=trailing_zero_min_days,
+                progress_callback=_fs_callback,
+            )
+            st.session_state["sarimax_fs_results"] = fs_results
+            _load_mlflow_runs.clear()
+            _load_gs_from_mlflow.clear()
+            _fs_progress.progress(1.0, text="Stufe 2: Fertig!")
+        except Exception as _exc:
+            st.error(f"Stufe 2 Fehler: {_exc}")
+            st.exception(_exc)
+
+# ── Grid Search Ergebnisse ───────────────────────────────────────────────────
+
+if "sarimax_gs_results" in st.session_state:
+    _gs = st.session_state["sarimax_gs_results"]
+    if not _gs.empty:
+        _best = _gs[_gs["best"]].iloc[0]
+        _param_cols = [c for c in ["p", "d", "q", "P", "D", "Q"] if c in _best.index]
+        st.success(
+            "**Stufe 1 - Beste Parameter:** "
+            + "  |  ".join(f"**{k}** = {int(_best[k])}" for k in _param_cols)
+            + f"  ->  MAE = {_best['cv_mae_mean']:.3f}"
+            + (f" +/- {_best['cv_mae_std']:.3f}" if "cv_mae_std" in _best.index else "")
+        )
+        _gs_display = [c for c in _gs.columns if c not in ("run_id", "feature_cols")]
+        st.dataframe(
+            _gs[_gs_display].style.highlight_min(
+                subset=["cv_mae_mean"], color="#1a472a"
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+if "sarimax_fs_results" in st.session_state:
+    _fs = st.session_state["sarimax_fs_results"]
+    if not _fs.empty:
+        _best_fs = _fs[_fs["best"]].iloc[0]
+        _best_feats = _best_fs.get("feature_set", "")
+        if isinstance(_best_feats, list):
+            _feat_display = ", ".join(_best_feats) if _best_feats else "keine"
+        else:
+            _feat_display = str(_best_feats) if _best_feats else "keine"
+        st.success(
+            f"**Stufe 2 - Beste Features ({int(_best_fs.get('n_features', 0))}):** "
+            f"{_feat_display}"
+            f"  ->  MAE = {_best_fs['cv_mae_mean']:.3f}"
+            + (
+                f" +/- {_best_fs['cv_mae_std']:.3f}"
+                if "cv_mae_std" in _best_fs.index
+                else ""
+            )
+        )
+        _fs_display = [c for c in _fs.columns if c not in ("run_id",)]
+        st.dataframe(
+            _fs[_fs_display].style.highlight_min(
+                subset=["cv_mae_mean"], color="#1a472a"
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+st.divider()
+
+# ── Feature-Auswahl ──────────────────────────────────────────────────────────
+
+st.subheader("Exogene Features")
+st.caption(
+    "Waehle die exogenen Variablen fuer das SARIMAX-Modell. "
+    "Bei woechentlichem Pattern wird `is_weekend` automatisch ausgeblendet."
+)
+
+selected_features: list[str] = []
+
+with st.expander("Feature-Gruppen auswaehlen", expanded=True):
+    for group_name, group_cols in FEATURE_GROUPS.items():
+        # Bei weekly: is_weekend ausblenden
+        display_cols = (
+            group_cols if is_daily else [c for c in group_cols if c != "is_weekend"]
+        )
+        if not display_cols:
+            continue
+
+        # on_change Callback: setzt Session State aller Feature-Checkboxen der Gruppe
+        def _make_select_all_callback(gname: str, cols: list[str]):
+            def _cb():
+                new_val = st.session_state[f"all_{gname}"]
+                for feat in cols:
+                    st.session_state[f"feat_{gname}_{feat}"] = new_val
+
+            return _cb
+
+        g_col1, g_col2 = st.columns([1, 5])
+        with g_col1:
+            st.checkbox(
+                "Alle",
+                key=f"all_{group_name}",
+                value=False,
+                on_change=_make_select_all_callback(group_name, display_cols),
+                help=f"Alle Features der Gruppe '{group_name}' auswaehlen",
+            )
+        with g_col2:
+            st.markdown(f"**{group_name}**")
+            feat_cols_ui = st.columns(min(len(display_cols), 4))
+            for i, feat in enumerate(display_cols):
+                with feat_cols_ui[i % len(feat_cols_ui)]:
+                    checked = st.checkbox(feat, key=f"feat_{group_name}_{feat}")
+                    if checked:
+                        selected_features.append(feat)
+
+st.caption(
+    f"Ausgewaehlte Features ({len(selected_features)}): "
+    + (
+        ", ".join(selected_features)
+        if selected_features
+        else "- keine (reines SARIMA) -"
+    )
+)
+
+st.divider()
+
+# ── Zeile 3: SARIMAX Parameter (manuell) ─────────────────────────────────────
 
 st.subheader("SARIMAX Parameter (p,d,q)(P,D,Q,s)")
 
-_default_season = defaults["season"]
-
-c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 with c1:
     p_val = st.number_input(
@@ -221,95 +632,51 @@ with c6:
     Q_val = st.number_input(
         "Q", min_value=0, max_value=3, value=1, help="Saisonale MA-Ordnung"
     )
-with c7:
-    s_val = st.slider(
-        "s (Season)",
-        min_value=1,
-        max_value=52,
-        value=_default_season,
-        help="Saisonalitäts-Periode: 7 für täglich, 52 für wöchentlich",
-    )
 
 order = (int(p_val), int(d_val), int(q_val))
 seasonal_order = (int(P_val), int(D_val), int(Q_val), int(s_val))
 
 st.divider()
 
-# ── Zeile 3: Feature-Auswahl ─────────────────────────────────────────────────
+# ── Run-Buttons ──────────────────────────────────────────────────────────────
 
-st.subheader("Exogene Features")
-st.caption(
-    "Wähle die exogenen Variablen für das SARIMAX-Modell. "
-    "Bei wöchentlichem Pattern wird `is_weekend` automatisch ausgeblendet."
+_has_gs = (
+    "sarimax_gs_results" in st.session_state
+    and not st.session_state["sarimax_gs_results"].empty
 )
 
-selected_features: list[str] = []
-
-with st.expander("Feature-Gruppen auswählen", expanded=True):
-    for group_name, group_cols in FEATURE_GROUPS.items():
-        # Bei weekly: is_weekend ausblenden
-        display_cols = (
-            group_cols if is_daily else [c for c in group_cols if c != "is_weekend"]
-        )
-        if not display_cols:
-            continue
-
-        # on_change Callback: setzt Session State aller Feature-Checkboxen der Gruppe
-        def _make_select_all_callback(gname: str, cols: list[str]):
-            def _cb():
-                new_val = st.session_state[f"all_{gname}"]
-                for feat in cols:
-                    st.session_state[f"feat_{gname}_{feat}"] = new_val
-
-            return _cb
-
-        g_col1, g_col2 = st.columns([1, 5])
-        with g_col1:
-            st.checkbox(
-                "Alle",
-                key=f"all_{group_name}",
-                value=False,
-                on_change=_make_select_all_callback(group_name, display_cols),
-                help=f"Alle Features der Gruppe '{group_name}' auswählen",
-            )
-        with g_col2:
-            st.markdown(f"**{group_name}**")
-            feat_cols_ui = st.columns(min(len(display_cols), 4))
-            for i, feat in enumerate(display_cols):
-                with feat_cols_ui[i % len(feat_cols_ui)]:
-                    checked = st.checkbox(feat, key=f"feat_{group_name}_{feat}")
-                    if checked:
-                        selected_features.append(feat)
-
-st.caption(
-    f"Ausgewählte Features ({len(selected_features)}): "
-    + (
-        ", ".join(selected_features)
-        if selected_features
-        else "— keine (reines SARIMA) —"
-    )
-)
-
-st.divider()
-
-# ── Run-Button ───────────────────────────────────────────────────────────────
-
-run_col, _ = st.columns([1, 4])
+run_col, best_col, _ = st.columns([1, 1, 3])
 with run_col:
     run_button = st.button("Run SARIMAX", use_container_width=True, type="primary")
+with best_col:
+    run_best_button = st.button(
+        "Run with Best Parameters",
+        use_container_width=True,
+        type="secondary",
+        disabled=not _has_gs,
+        help=(
+            "Nutzt die besten Parameter aus dem letzten Grid Search"
+            if _has_gs
+            else "Zuerst Grid Search ausfuehren"
+        ),
+    )
 
 # ── Training ─────────────────────────────────────────────────────────────────
 
-if run_button:
-    setup_mlflow(EXPERIMENT)
 
+def _run_sarimax_training(
+    use_order: tuple[int, int, int],
+    use_seasonal: tuple[int, int, int, int],
+    use_features: list[str],
+) -> None:
+    """Shared training logic for both run buttons."""
+    setup_mlflow(EXPERIMENT)
     with st.spinner(
-        f"Trainiere SARIMAX{order}x{seasonal_order} auf {pattern} "
-        f"(store={store}, item={item}) …"
+        f"Trainiere SARIMAX{use_order}x{use_seasonal} auf {pattern} "
+        f"(store={store}, item={item}) ..."
     ):
         try:
             df = _load_segment(pattern)
-
             results, fig = run_sarimax_plotly(
                 df=df,
                 pattern=pattern,
@@ -318,22 +685,52 @@ if run_button:
                 freq="D" if is_daily else "W",
                 season_length=int(s_val),
                 test_weeks=int(test_weeks),
-                order=order,
-                seasonal_order=seasonal_order,
-                feature_cols=selected_features,
+                order=use_order,
+                seasonal_order=use_seasonal,
+                feature_cols=use_features,
                 trailing_zero_min_days=trailing_zero_min_days,
                 img_dir=IMG_DIR,
             )
-
             st.session_state["sarimax_results"] = results
             st.session_state["sarimax_fig"] = fig
             _load_mlflow_runs.clear()
-
         except Exception as exc:
             if mlflow.active_run() is not None:
                 mlflow.end_run()
             st.error(f"Fehler beim SARIMAX-Training: {exc}")
             st.exception(exc)
+
+
+if run_button:
+    _run_sarimax_training(order, seasonal_order, selected_features)
+
+if run_best_button and _has_gs:
+    _best_gs = st.session_state["sarimax_gs_results"]
+    _best_row = _best_gs[_best_gs["best"]].iloc[0]
+    _best_order = (int(_best_row["p"]), int(_best_row["d"]), int(_best_row["q"]))
+    _best_seasonal = (
+        int(_best_row["P"]),
+        int(_best_row["D"]),
+        int(_best_row["Q"]),
+        int(s_val),
+    )
+    # Feature-Subset aus Stufe 2 verwenden, falls vorhanden
+    _has_fs = (
+        "sarimax_fs_results" in st.session_state
+        and not st.session_state["sarimax_fs_results"].empty
+    )
+    if _has_fs:
+        _best_fs = st.session_state["sarimax_fs_results"]
+        _best_fs_row = _best_fs[_best_fs["best"]].iloc[0]
+        _best_features = _best_fs_row["feature_cols"]
+    else:
+        _best_features = selected_features
+
+    st.info(
+        f"Beste Parameter: SARIMAX{_best_order}x{_best_seasonal}  |  "
+        f"Features: {len(_best_features)}"
+    )
+    _run_sarimax_training(_best_order, _best_seasonal, _best_features)
 
 # ── Ergebnisse ───────────────────────────────────────────────────────────────
 
@@ -347,7 +744,7 @@ if "sarimax_results" in st.session_state:
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric("MAE SARIMAX", f"{r['mae_primary']:.2f}")
     m2.metric("MAE Naive", f"{r['mae_naive']:.2f}")
-    m3.metric("R² SARIMAX", f"{r['r2_primary']:.3f}")
+    m3.metric("R2 SARIMAX", f"{r['r2_primary']:.3f}")
     m4.metric(
         "Verbesserung",
         f"{r['improvement_pct']:+.1f}%",
@@ -362,7 +759,7 @@ if "sarimax_results" in st.session_state:
 # ── MLflow Run History ────────────────────────────────────────────────────────
 
 st.divider()
-st.subheader("MLflow Run History — SARIMAX")
+st.subheader("MLflow Run History - SARIMAX")
 
 btn_col, _ = st.columns([1, 5])
 with btn_col:
@@ -390,7 +787,7 @@ else:
         "params.n_exog_features": "Exog #",
         "metrics.mae_primary": "MAE (SARIMAX)",
         "metrics.mae_naive": "MAE (Naive)",
-        "metrics.r2_primary": "R²",
+        "metrics.r2_primary": "R2",
         "metrics.improvement_pct": "Improvement %",
         "start_time": "Zeitpunkt",
     }
@@ -401,8 +798,8 @@ else:
             display_df[col] = display_df[col].map(
                 lambda x: f"{x:.2f}" if pd.notna(x) else "-"
             )
-    if "R²" in display_df.columns:
-        display_df["R²"] = display_df["R²"].map(
+    if "R2" in display_df.columns:
+        display_df["R2"] = display_df["R2"].map(
             lambda x: f"{x:.3f}" if pd.notna(x) else "-"
         )
     if "Improvement %" in display_df.columns:

@@ -1,0 +1,1 @@
+['is_holiday_or_event', 'pre_holiday', 'post_holiday', 'oil_price', 'oil_price_ma7', 'oil_price_ma28', 'oil_price_pct_change', 'store_cluster', 'perishable', 'store_type', 'family']

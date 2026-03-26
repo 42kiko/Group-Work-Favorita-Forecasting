@@ -1,0 +1,1 @@
+['is_holiday_or_event', 'pre_holiday', 'post_holiday', 'transactions', 'transactions_ma7', 'transactions_z_score', 'onpromotion', 'promo_streak', 'promo_rate_7d']

@@ -17,12 +17,15 @@ Alle Runs werden automatisch in MLflow geloggt.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
+from itertools import product
 from pathlib import Path
 
 import mlflow
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from mlflow.tracking import MlflowClient
 from plotly.subplots import make_subplots
 from sklearn.metrics import mean_absolute_error, r2_score
 from statsforecast import StatsForecast
@@ -103,6 +106,63 @@ def _build_exog_matrix(
     return X
 
 
+def _prepare_exog_aligned(
+    df: pd.DataFrame,
+    ts: pd.DataFrame,
+    store: int,
+    item: int,
+    feature_cols: list[str],
+    freq: str,
+) -> np.ndarray | None:
+    """
+    Baut die exogene Feature-Matrix und aligniert sie mit der Zeitreihe *ts*.
+
+    Returns
+    -------
+    np.ndarray mit Shape (len(ts), n_features) oder None wenn keine Features.
+    """
+    is_weekly = freq == "W"
+    if not feature_cols:
+        return None
+
+    if "store_nbr" in df.columns:
+        slice_df = df[(df["store_nbr"] == store) & (df["item_nbr"] == item)].copy()
+        date_col = "week_start" if is_weekly else "date"
+        slice_df[date_col] = pd.to_datetime(slice_df[date_col])
+        slice_df = slice_df.sort_values(date_col).reset_index(drop=True)
+    else:
+        slice_df = df.copy()
+        date_col = "week_start" if "week_start" in df.columns else "date"
+
+    X_full = _build_exog_matrix(slice_df, feature_cols, is_weekly=is_weekly)
+
+    if X_full.shape[1] == 0:
+        return None
+
+    ts_reset = ts.reset_index(drop=True)
+    ts_ds = pd.to_datetime(ts_reset["ds"])
+
+    if len(ts_reset) == len(X_full):
+        return X_full.values
+
+    # Merge ueber Datum
+    ts_with_idx = pd.DataFrame({"ds": ts_ds})
+    ts_with_idx["_pos"] = np.arange(len(ts_with_idx))
+    slice_with_idx = pd.DataFrame(
+        {date_col: pd.to_datetime(slice_df[date_col])}
+    ).reset_index(drop=True)
+    slice_with_idx["_slice_pos"] = np.arange(len(slice_with_idx))
+    merged = ts_with_idx.merge(
+        slice_with_idx, left_on="ds", right_on=date_col, how="left"
+    )
+    valid_pos = merged["_slice_pos"].fillna(-1).astype(int).values
+    X_arr = np.zeros((len(ts_reset), X_full.shape[1]))
+    for i, pos in enumerate(valid_pos):
+        if 0 <= pos < len(X_full):
+            X_arr[i] = X_full.iloc[pos].values
+    return X_arr
+
+
 def _next_sarimax_run_number(pattern: str) -> int:
     """Gibt die nächste Run-Nummer für das Pattern zurück."""
     try:
@@ -159,7 +219,6 @@ def run_sarimax_plotly(
     -------
     (results_dict, fig)
     """
-    is_weekly = freq == "W"
     if feature_cols is None:
         feature_cols = []
 
@@ -173,58 +232,20 @@ def run_sarimax_plotly(
     )
 
     # ── 2. Exogene Feature-Matrix aus angereichertem df ─────────────────────
-    # Benötigt den gefilterten Slice aus df (gleiche Datumsrange wie ts)
-    if "store_nbr" in df.columns:
-        slice_df = df[(df["store_nbr"] == store) & (df["item_nbr"] == item)].copy()
-        date_col = "week_start" if is_weekly else "date"
-        slice_df[date_col] = pd.to_datetime(slice_df[date_col])
-        slice_df = slice_df.sort_values(date_col).reset_index(drop=True)
-    else:
-        slice_df = df.copy()
-        date_col = "week_start" if "week_start" in df.columns else "date"
-
-    X_full = _build_exog_matrix(slice_df, feature_cols, is_weekly=is_weekly)
-
     ts["ds"] = pd.to_datetime(ts["ds"])
+    X_aligned = _prepare_exog_aligned(df, ts, store, item, feature_cols, freq)
+    use_exog = X_aligned is not None
 
     # ── 3. Train/Test-Split ───────────────────────────────────────────────────
     train_ts, test_ts = train_test_split(ts, test_weeks=test_weeks)
 
-    # X-Matrix auf gleiche Zeitpunkte filtern
-    if X_full.shape[1] > 0:
-        # Mapping über Position (slice_df ist bereits gleich sortiert wie ts)
-        # Sicherheitshalber per merge
-        ts_reset = ts.reset_index(drop=True)
-
-        if len(ts_reset) == len(X_full):
-            X_aligned = X_full.values
-        else:
-            # Merge über Datum
-            ts_with_idx = ts_reset[["ds"]].copy()
-            ts_with_idx["_pos"] = np.arange(len(ts_with_idx))
-            slice_with_idx = pd.DataFrame(
-                {date_col: pd.to_datetime(slice_df[date_col])}
-            ).reset_index(drop=True)
-            slice_with_idx["_slice_pos"] = np.arange(len(slice_with_idx))
-            merged = ts_with_idx.merge(
-                slice_with_idx, left_on="ds", right_on=date_col, how="left"
-            )
-            valid_pos = merged["_slice_pos"].fillna(-1).astype(int).values
-            X_arr = np.zeros((len(ts_reset), X_full.shape[1]))
-            for i, pos in enumerate(valid_pos):
-                if 0 <= pos < len(X_full):
-                    X_arr[i] = X_full.iloc[pos].values
-            X_aligned = X_arr
-
-        n_train = len(train_ts)
+    n_train = len(train_ts)
+    if use_exog:
         X_train = X_aligned[:n_train]
         X_test = X_aligned[n_train:]
-
-        use_exog = True
     else:
         X_train = None
         X_test = None
-        use_exog = False
 
     # ── 4. SARIMAX fitten ─────────────────────────────────────────────────────
     print(
@@ -281,7 +302,7 @@ def run_sarimax_plotly(
         "improvement_pct": improvement_pct,
         "train_size": len(train_ts),
         "test_size": n_test,
-        "n_exog": X_full.shape[1] if use_exog else 0,
+        "n_exog": X_aligned.shape[1] if use_exog else 0,
     }
 
     # ── 8. Plotly-Chart ───────────────────────────────────────────────────────
@@ -406,7 +427,7 @@ def run_sarimax_plotly(
                 "s_d": D,
                 "s_q": Q,
                 "s": s,
-                "n_exog_features": X_full.shape[1] if use_exog else 0,
+                "n_exog_features": X_aligned.shape[1] if use_exog else 0,
                 "feature_cols": str(feature_cols),
             }
         )
@@ -426,3 +447,511 @@ def run_sarimax_plotly(
             mlflow.log_artifact(str(img_path))
 
     return results, fig
+
+
+# ─── Walk-Forward Cross-Validation ───────────────────────────────────────────
+
+
+def _walk_forward_cv(
+    endog: np.ndarray,
+    exog: np.ndarray | None,
+    order: tuple[int, int, int],
+    seasonal_order: tuple[int, int, int, int],
+    horizon: int,
+    n_windows: int,
+    step_size: int,
+) -> list[float]:
+    """
+    Manuelle Walk-Forward-CV fuer statsmodels SARIMAX.
+
+    Returns
+    -------
+    Liste der per-Fold-MAE-Werte (np.nan bei Fehlern).
+    """
+    T = len(endog)
+    mae_per_fold: list[float] = []
+    min_train = max(2 * seasonal_order[3], 30)
+
+    for i in range(n_windows):
+        cutoff = T - horizon - (n_windows - 1 - i) * step_size
+        if cutoff < min_train:
+            mae_per_fold.append(np.nan)
+            continue
+
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model = SARIMAX(
+                    endog=endog[:cutoff],
+                    exog=exog[:cutoff] if exog is not None else None,
+                    order=order,
+                    seasonal_order=seasonal_order,
+                    enforce_stationarity=False,
+                    enforce_invertibility=False,
+                )
+                result = model.fit(disp=False, maxiter=50)
+
+            forecast = result.forecast(
+                steps=horizon,
+                exog=exog[cutoff : cutoff + horizon] if exog is not None else None,
+            )
+            forecast = np.maximum(forecast, 0)
+            y_true = endog[cutoff : cutoff + horizon]
+            mae_per_fold.append(float(mean_absolute_error(y_true, forecast)))
+        except Exception:
+            mae_per_fold.append(np.nan)
+
+    return mae_per_fold
+
+
+# ─── Grid Search (Stufe 1: Parameter) ───────────────────────────────────────
+
+
+_DEFAULT_SARIMAX_GRID: dict[str, list[int]] = {
+    "p": [0, 1, 2],
+    "d": [0, 1],
+    "q": [0, 1, 2],
+    "P": [0, 1],
+    "D": [0, 1],
+    "Q": [0, 1],
+}
+
+
+def run_sarimax_grid_search(
+    df: pd.DataFrame,
+    pattern: str,
+    store: int,
+    item: int,
+    freq: str = "D",
+    season_length: int = 7,
+    horizon: int = 28,
+    n_windows: int = 3,
+    step_size: int | None = None,
+    param_grid: dict[str, list[int]] | None = None,
+    feature_cols: list[str] | None = None,
+    trailing_zero_min_days: int = 0,
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> pd.DataFrame:
+    """
+    Grid Search ueber (p,d,q)(P,D,Q) mit Walk-Forward-CV.
+
+    Sucht die besten SARIMAX-Parameter bei fixen exogenen Features.
+    Jede Kombination wird als separater MLflow-Run geloggt.
+
+    Returns
+    -------
+    DataFrame mit einer Zeile pro Kombination, sortiert nach cv_mae_mean.
+    Spalten: p, d, q, P, D, Q, cv_mae_mean, cv_mae_std,
+             n_successful_folds, run_id, best.
+    """
+    param_grid = param_grid or _DEFAULT_SARIMAX_GRID
+    step_size = step_size or horizon
+    if feature_cols is None:
+        feature_cols = []
+
+    experiment_name = "favorita_sarimax_store_item"
+    mlflow.set_experiment(experiment_name)
+    _client = MlflowClient()
+    _exp = mlflow.get_experiment_by_name(experiment_name)
+
+    # Zeitreihe einmalig vorbereiten
+    ts = load_and_prepare(
+        df, store, item, freq=freq, trailing_zero_min_days=trailing_zero_min_days
+    )
+    ts["ds"] = pd.to_datetime(ts["ds"])
+    endog = ts["y"].values
+
+    # Exog einmalig bauen
+    X_aligned = _prepare_exog_aligned(df, ts, store, item, feature_cols, freq)
+
+    keys = list(param_grid.keys())
+    combos = list(product(*[param_grid[k] for k in keys]))
+    total = len(combos)
+    print(
+        f"\nSARIMAX Grid Search: {total} Kombinationen x {n_windows} Folds "
+        f"(horizon={horizon})"
+    )
+
+    gs_group = f"{pattern}_sarimax_gs"
+    results: list[dict] = []
+
+    for idx, combo_values in enumerate(combos):
+        combo = dict(zip(keys, combo_values, strict=True))
+        p, d, q = combo.get("p", 1), combo.get("d", 1), combo.get("q", 1)
+        P, D, Q = combo.get("P", 0), combo.get("D", 0), combo.get("Q", 0)
+        s_order = (P, D, Q, season_length)
+
+        combo_label = f"p{p}d{d}q{q}P{P}D{D}Q{Q}"
+        run_name = f"{gs_group}_{idx + 1:03d}_{combo_label}"
+        print(f"  [{idx + 1}/{total}] {combo_label} ...", end=" ", flush=True)
+
+        _run_id = _client.create_run(
+            experiment_id=_exp.experiment_id,
+            run_name=run_name,
+        ).info.run_id
+
+        try:
+            mae_folds = _walk_forward_cv(
+                endog=endog,
+                exog=X_aligned,
+                order=(p, d, q),
+                seasonal_order=s_order,
+                horizon=horizon,
+                n_windows=n_windows,
+                step_size=step_size,
+            )
+
+            valid_maes = [m for m in mae_folds if not np.isnan(m)]
+            n_ok = len(valid_maes)
+
+            if n_ok == 0 or n_ok < n_windows / 2:
+                print("FAILED (zu wenige Folds konvergiert)")
+                _client.set_terminated(_run_id, "FAILED")
+                if progress_callback is not None:
+                    progress_callback(idx + 1, total)
+                continue
+
+            cv_mae_mean = float(np.mean(valid_maes))
+            cv_mae_std = float(np.std(valid_maes)) if n_ok > 1 else 0.0
+            print(f"MAE={cv_mae_mean:.3f} +/- {cv_mae_std:.3f} ({n_ok}/{n_windows})")
+
+            base_params = {
+                "pattern": pattern,
+                "model_type": "sarimax",
+                "freq": freq,
+                "store": store,
+                "item": item,
+                "season_length": season_length,
+                "cv_horizon": horizon,
+                "cv_n_windows": n_windows,
+                "cv_step_size": step_size,
+                "cv_group": gs_group,
+                "p": p,
+                "d": d,
+                "q": q,
+                "s_p": P,
+                "s_d": D,
+                "s_q": Q,
+                "s": season_length,
+                "n_exog_features": X_aligned.shape[1] if X_aligned is not None else 0,
+                "feature_cols": str(feature_cols),
+            }
+            for key, val in base_params.items():
+                _client.log_param(_run_id, key, str(val))
+            _client.log_metric(_run_id, "cv_mae_mean", cv_mae_mean)
+            _client.log_metric(_run_id, "cv_mae_std", cv_mae_std)
+            for fold_idx, mae_val in enumerate(mae_folds):
+                if not np.isnan(mae_val):
+                    _client.log_metric(_run_id, "cv_mae_fold", mae_val, step=fold_idx)
+            _client.set_tag(_run_id, "cv", "grid_search")
+            _client.set_terminated(_run_id, "FINISHED")
+
+            results.append(
+                {
+                    **combo,
+                    "cv_mae_mean": cv_mae_mean,
+                    "cv_mae_std": cv_mae_std,
+                    "n_successful_folds": n_ok,
+                    "run_id": _run_id,
+                }
+            )
+
+        except Exception as exc:
+            print(f"FAILED ({exc})")
+            _client.set_terminated(_run_id, "FAILED")
+
+        if progress_callback is not None:
+            progress_callback(idx + 1, total)
+
+    if not results:
+        return pd.DataFrame()
+
+    results_df = pd.DataFrame(results).sort_values("cv_mae_mean").reset_index(drop=True)
+    results_df["best"] = False
+    results_df.loc[0, "best"] = True
+
+    best_run_id = results_df.loc[0, "run_id"]
+    _client.set_tag(best_run_id, "best_in_group", gs_group)
+    print(
+        f"\nBeste Kombination: "
+        f"{results_df.loc[0, list(keys)].to_dict()}  "
+        f"MAE={results_df.loc[0, 'cv_mae_mean']:.3f}"
+    )
+
+    return results_df
+
+
+# ─── Feature Search (Stufe 2: Feature-Gruppen) ──────────────────────────────
+
+
+_DEFAULT_FEATURE_GROUPS: dict[str, list[str]] = {
+    "Holidays": ["is_holiday_or_event", "pre_holiday", "post_holiday"],
+    "Oil Price": [
+        "oil_price",
+        "oil_price_ma7",
+        "oil_price_ma28",
+        "oil_price_pct_change",
+    ],
+    "Calendar": [
+        "is_weekend",
+        "is_payday",
+        "is_month_start",
+        "is_month_end",
+        "days_to_next_holiday",
+        "days_since_last_holiday",
+    ],
+    "Transactions": ["transactions", "transactions_ma7", "transactions_z_score"],
+    "Promotion": ["onpromotion", "promo_streak", "promo_rate_7d"],
+    "Store / Item": ["store_cluster", "perishable", "store_type", "family"],
+}
+
+
+def _get_all_candidate_features(freq: str) -> list[str]:
+    """Alle verfuegbaren Einzel-Features (ohne Kategorien die one-hot werden)."""
+    all_feats: list[str] = []
+    for cols in _DEFAULT_FEATURE_GROUPS.values():
+        for c in cols:
+            if freq == "W" and c == "is_weekend":
+                continue
+            all_feats.append(c)
+    return all_feats
+
+
+def run_sarimax_feature_search(
+    df: pd.DataFrame,
+    pattern: str,
+    store: int,
+    item: int,
+    freq: str = "D",
+    season_length: int = 7,
+    horizon: int = 28,
+    n_windows: int = 3,
+    step_size: int | None = None,
+    order: tuple[int, int, int] = (1, 1, 1),
+    seasonal_order: tuple[int, int, int, int] = (1, 0, 1, 7),
+    candidate_features: list[str] | None = None,
+    trailing_zero_min_days: int = 0,
+    progress_callback: Callable[[int, int, str], None] | None = None,
+) -> pd.DataFrame:
+    """
+    Stufe 2: Forward Stepwise Feature Selection bei fixen SARIMAX-Parametern.
+
+    Startet ohne Features (Baseline), fuegt in jedem Schritt das Feature hinzu
+    das den MAE am meisten verbessert, und stoppt wenn kein Feature mehr hilft.
+
+    Parameters
+    ----------
+    candidate_features : list[str] | None
+        Einzelne Feature-Namen die getestet werden sollen.
+        None = alle verfuegbaren Features.
+    progress_callback : callable(done: int, total: int, msg: str) | None
+        Fortschritts-Callback mit Status-Nachricht.
+
+    Returns
+    -------
+    DataFrame mit allen getesteten Schritten (step, added_feature, feature_set,
+    cv_mae_mean, cv_mae_std, n_features, run_id, best).
+    """
+    step_size = step_size or horizon
+    if candidate_features is None:
+        candidate_features = _get_all_candidate_features(freq)
+
+    experiment_name = "favorita_sarimax_store_item"
+    mlflow.set_experiment(experiment_name)
+    _client = MlflowClient()
+    _exp = mlflow.get_experiment_by_name(experiment_name)
+
+    # Zeitreihe einmalig vorbereiten
+    ts = load_and_prepare(
+        df, store, item, freq=freq, trailing_zero_min_days=trailing_zero_min_days
+    )
+    ts["ds"] = pd.to_datetime(ts["ds"])
+    endog = ts["y"].values
+
+    remaining = list(candidate_features)
+    selected: list[str] = []
+    fs_group = f"{pattern}_sarimax_fs"
+    results: list[dict] = []
+    step_counter = 0
+
+    # Gesamtanzahl Evaluierungen schaetzen: n + (n-1) + ... + 1 = n*(n+1)/2
+    n_feats = len(remaining)
+    total_evals = n_feats * (n_feats + 1) // 2
+    eval_counter = 0
+
+    print(
+        f"\nSARIMAX Forward Feature Selection: {n_feats} Features, "
+        f"max {total_evals} Evaluierungen "
+        f"(order={order}, seasonal={seasonal_order})"
+    )
+
+    def _eval_feature_set(
+        feat_list: list[str], label: str
+    ) -> tuple[float, float, int, str]:
+        """Evaluiert ein Feature-Set, loggt in MLflow, gibt (mae, std, n_ok, run_id)."""
+        X_aligned = _prepare_exog_aligned(df, ts, store, item, feat_list, freq)
+
+        run_name = f"{fs_group}_{step_counter:02d}_{label}"
+        _run_id = _client.create_run(
+            experiment_id=_exp.experiment_id,
+            run_name=run_name,
+        ).info.run_id
+
+        try:
+            mae_folds = _walk_forward_cv(
+                endog=endog,
+                exog=X_aligned,
+                order=order,
+                seasonal_order=seasonal_order,
+                horizon=horizon,
+                n_windows=n_windows,
+                step_size=step_size,
+            )
+            valid_maes = [m for m in mae_folds if not np.isnan(m)]
+            n_ok = len(valid_maes)
+
+            if n_ok == 0 or n_ok < n_windows / 2:
+                _client.set_terminated(_run_id, "FAILED")
+                return float("inf"), 0.0, 0, _run_id
+
+            cv_mae_mean = float(np.mean(valid_maes))
+            cv_mae_std = float(np.std(valid_maes)) if n_ok > 1 else 0.0
+
+            params = {
+                "pattern": pattern,
+                "model_type": "sarimax",
+                "freq": freq,
+                "store": store,
+                "item": item,
+                "season_length": season_length,
+                "cv_horizon": horizon,
+                "cv_n_windows": n_windows,
+                "cv_group": fs_group,
+                "p": order[0],
+                "d": order[1],
+                "q": order[2],
+                "s_p": seasonal_order[0],
+                "s_d": seasonal_order[1],
+                "s_q": seasonal_order[2],
+                "s": seasonal_order[3],
+                "n_exog_features": len(feat_list),
+                "feature_cols": str(feat_list),
+                "fs_step": step_counter,
+            }
+            for key, val in params.items():
+                _client.log_param(_run_id, key, str(val))
+            _client.log_metric(_run_id, "cv_mae_mean", cv_mae_mean)
+            _client.log_metric(_run_id, "cv_mae_std", cv_mae_std)
+            _client.set_tag(_run_id, "cv", "feature_search")
+            _client.set_terminated(_run_id, "FINISHED")
+
+            return cv_mae_mean, cv_mae_std, n_ok, _run_id
+
+        except Exception:
+            _client.set_terminated(_run_id, "FAILED")
+            return float("inf"), 0.0, 0, _run_id
+
+    # ── Baseline: ohne Features ────────────────────────────────────────────
+    print("  [Baseline] keine Features ...", end=" ", flush=True)
+    base_mae, base_std, base_ok, base_rid = _eval_feature_set([], "baseline")
+    eval_counter += 1
+    if progress_callback is not None:
+        progress_callback(eval_counter, total_evals, "Baseline")
+
+    if base_ok > 0:
+        print(f"MAE={base_mae:.3f}")
+        results.append(
+            {
+                "step": 0,
+                "added_feature": "(baseline)",
+                "cv_mae_mean": base_mae,
+                "cv_mae_std": base_std,
+                "n_features": 0,
+                "feature_set": [],
+                "n_successful_folds": base_ok,
+                "run_id": base_rid,
+            }
+        )
+    best_mae = base_mae
+
+    # ── Forward Selection Schritte ─────────────────────────────────────────
+    while remaining:
+        step_counter += 1
+        print(f"\n  [Step {step_counter}] Teste {len(remaining)} Features ...")
+        best_candidate = None
+        best_candidate_mae = float("inf")
+        best_candidate_std = 0.0
+        best_candidate_ok = 0
+        best_candidate_rid = ""
+
+        for feat in remaining:
+            trial = [*selected, feat]
+            label = feat.replace(" ", "_")[:20]
+            print(f"    + {feat} ...", end=" ", flush=True)
+            mae, std, n_ok, rid = _eval_feature_set(trial, f"s{step_counter}_{label}")
+            eval_counter += 1
+
+            if progress_callback is not None:
+                progress_callback(
+                    eval_counter,
+                    total_evals,
+                    f"Step {step_counter}: +{feat}",
+                )
+
+            if n_ok > 0:
+                print(f"MAE={mae:.3f}")
+            else:
+                print("FAILED")
+
+            if mae < best_candidate_mae:
+                best_candidate = feat
+                best_candidate_mae = mae
+                best_candidate_std = std
+                best_candidate_ok = n_ok
+                best_candidate_rid = rid
+
+        # Stopp wenn kein Feature den MAE verbessert
+        if best_candidate is None or best_candidate_mae >= best_mae:
+            print(
+                f"\n  Stopp: Kein Feature verbessert MAE " f"(aktuell {best_mae:.3f})"
+            )
+            break
+
+        # Bestes Feature aufnehmen
+        selected.append(best_candidate)
+        remaining.remove(best_candidate)
+        best_mae = best_candidate_mae
+        print(f"  -> Aufgenommen: {best_candidate} " f"(MAE={best_candidate_mae:.3f})")
+
+        results.append(
+            {
+                "step": step_counter,
+                "added_feature": best_candidate,
+                "cv_mae_mean": best_candidate_mae,
+                "cv_mae_std": best_candidate_std,
+                "n_features": len(selected),
+                "feature_set": list(selected),
+                "n_successful_folds": best_candidate_ok,
+                "run_id": best_candidate_rid,
+            }
+        )
+
+    if not results:
+        return pd.DataFrame()
+
+    results_df = pd.DataFrame(results).reset_index(drop=True)
+    results_df["best"] = False
+    best_idx = results_df["cv_mae_mean"].idxmin()
+    results_df.loc[best_idx, "best"] = True
+
+    best_run_id = results_df.loc[best_idx, "run_id"]
+    _client.set_tag(best_run_id, "best_in_group", fs_group)
+
+    best_feats = results_df.loc[best_idx, "feature_set"]
+    print(
+        f"\nBestes Feature-Set ({len(best_feats)} Features): "
+        f"{best_feats or ['keine']}  "
+        f"MAE={results_df.loc[best_idx, 'cv_mae_mean']:.3f}"
+    )
+
+    return results_df
