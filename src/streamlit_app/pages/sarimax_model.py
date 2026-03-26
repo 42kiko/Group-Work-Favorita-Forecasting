@@ -138,6 +138,8 @@ def _load_gs_from_mlflow(
         result = pd.DataFrame()
         if "params.fs_step" in runs.columns:
             result["step"] = pd.to_numeric(runs["params.fs_step"], errors="coerce")
+        if "params.added_feature" in runs.columns:
+            result["added_feature"] = runs["params.added_feature"]
         if "params.feature_cols" in runs.columns:
             result["feature_set"] = runs["params.feature_cols"]
         if "params.n_exog_features" in runs.columns:
@@ -152,8 +154,12 @@ def _load_gs_from_mlflow(
         result = result.dropna(subset=["cv_mae_mean"]).reset_index(drop=True)
         if result.empty:
             return None
+        # Nach Step sortieren damit die Reihenfolge stimmt
+        if "step" in result.columns:
+            result = result.sort_values("step").reset_index(drop=True)
         result["best"] = False
-        result.loc[0, "best"] = True
+        best_idx = result["cv_mae_mean"].idxmin()
+        result.loc[best_idx, "best"] = True
         return result
 
     return None
@@ -281,15 +287,15 @@ st.divider()
 _gs_key = f"sarimax_gs_{pattern}_{store}_{item}"
 _fs_key = f"sarimax_fs_{pattern}_{store}_{item}"
 
-if "sarimax_gs_results" not in st.session_state:
+if _gs_key not in st.session_state:
     _cached_gs = _load_gs_from_mlflow(pattern, int(store), int(item), "grid_search")
     if _cached_gs is not None:
-        st.session_state["sarimax_gs_results"] = _cached_gs
+        st.session_state[_gs_key] = _cached_gs
 
-if "sarimax_fs_results" not in st.session_state:
+if _fs_key not in st.session_state:
     _cached_fs = _load_gs_from_mlflow(pattern, int(store), int(item), "feature_search")
     if _cached_fs is not None:
-        st.session_state["sarimax_fs_results"] = _cached_fs
+        st.session_state[_fs_key] = _cached_fs
 
 # ── Grid Search CV ───────────────────────────────────────────────────────────
 
@@ -385,8 +391,7 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
         )
     with _fs_btn_col:
         _has_gs_for_fs = (
-            "sarimax_gs_results" in st.session_state
-            and not st.session_state["sarimax_gs_results"].empty
+            _gs_key in st.session_state and not st.session_state[_gs_key].empty
         )
         fs_run = st.button(
             "Stufe 2: Feature-Search",
@@ -438,7 +443,7 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
                 trailing_zero_min_days=trailing_zero_min_days,
                 progress_callback=_gs_callback,
             )
-            st.session_state["sarimax_gs_results"] = gs_results
+            st.session_state[_gs_key] = gs_results
             _load_mlflow_runs.clear()
             _load_gs_from_mlflow.clear()
             _gs_progress.progress(1.0, text="Stufe 1: Fertig!")
@@ -448,7 +453,7 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
 
     # ── Stufe 2 ausfuehren ────────────────────────────────────────────────
     if fs_run and _has_gs_for_fs:
-        _best_gs = st.session_state["sarimax_gs_results"]
+        _best_gs = st.session_state[_gs_key]
         _best_row = _best_gs[_best_gs["best"]].iloc[0]
         _best_order = (int(_best_row["p"]), int(_best_row["d"]), int(_best_row["q"]))
         _best_seasonal = (
@@ -485,7 +490,7 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
                 trailing_zero_min_days=trailing_zero_min_days,
                 progress_callback=_fs_callback,
             )
-            st.session_state["sarimax_fs_results"] = fs_results
+            st.session_state[_fs_key] = fs_results
             _load_mlflow_runs.clear()
             _load_gs_from_mlflow.clear()
             _fs_progress.progress(1.0, text="Stufe 2: Fertig!")
@@ -495,8 +500,8 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
 
 # ── Grid Search Ergebnisse ───────────────────────────────────────────────────
 
-if "sarimax_gs_results" in st.session_state:
-    _gs = st.session_state["sarimax_gs_results"]
+if _gs_key in st.session_state:
+    _gs = st.session_state[_gs_key]
     if not _gs.empty:
         _best = _gs[_gs["best"]].iloc[0]
         _param_cols = [c for c in ["p", "d", "q", "P", "D", "Q"] if c in _best.index]
@@ -515,17 +520,19 @@ if "sarimax_gs_results" in st.session_state:
             hide_index=True,
         )
 
-if "sarimax_fs_results" in st.session_state:
-    _fs = st.session_state["sarimax_fs_results"]
+if _fs_key in st.session_state:
+    _fs = st.session_state[_fs_key]
     if not _fs.empty:
         _best_fs = _fs[_fs["best"]].iloc[0]
-        _best_feats = _best_fs.get("feature_set", "")
+        _best_feats = _best_fs.get("feature_set", [])
         if isinstance(_best_feats, list):
             _feat_display = ", ".join(_best_feats) if _best_feats else "keine"
         else:
             _feat_display = str(_best_feats) if _best_feats else "keine"
+        _best_step = int(_best_fs.get("step", 0))
+        _best_n = int(_best_fs.get("n_features", 0))
         st.success(
-            f"**Stufe 2 - Beste Features ({int(_best_fs.get('n_features', 0))}):** "
+            f"**Stufe 2 - Beste Kombination (Step {_best_step}, {_best_n} Features):** "
             f"{_feat_display}"
             f"  ->  MAE = {_best_fs['cv_mae_mean']:.3f}"
             + (
@@ -534,7 +541,7 @@ if "sarimax_fs_results" in st.session_state:
                 else ""
             )
         )
-        _fs_display = [c for c in _fs.columns if c not in ("run_id",)]
+        _fs_display = [c for c in _fs.columns if c not in ("run_id", "feature_set")]
         st.dataframe(
             _fs[_fs_display].style.highlight_min(
                 subset=["cv_mae_mean"], color="#1a472a"
@@ -640,10 +647,7 @@ st.divider()
 
 # ── Run-Buttons ──────────────────────────────────────────────────────────────
 
-_has_gs = (
-    "sarimax_gs_results" in st.session_state
-    and not st.session_state["sarimax_gs_results"].empty
-)
+_has_gs = _gs_key in st.session_state and not st.session_state[_gs_key].empty
 
 run_col, best_col, _ = st.columns([1, 1, 3])
 with run_col:
@@ -705,7 +709,7 @@ if run_button:
     _run_sarimax_training(order, seasonal_order, selected_features)
 
 if run_best_button and _has_gs:
-    _best_gs = st.session_state["sarimax_gs_results"]
+    _best_gs = st.session_state[_gs_key]
     _best_row = _best_gs[_best_gs["best"]].iloc[0]
     _best_order = (int(_best_row["p"]), int(_best_row["d"]), int(_best_row["q"]))
     _best_seasonal = (
@@ -714,21 +718,27 @@ if run_best_button and _has_gs:
         int(_best_row["Q"]),
         int(s_val),
     )
-    # Feature-Subset aus Stufe 2 verwenden, falls vorhanden
-    _has_fs = (
-        "sarimax_fs_results" in st.session_state
-        and not st.session_state["sarimax_fs_results"].empty
-    )
-    if _has_fs:
-        _best_fs = st.session_state["sarimax_fs_results"]
-        _best_fs_row = _best_fs[_best_fs["best"]].iloc[0]
-        _best_features = _best_fs_row["feature_cols"]
-    else:
-        _best_features = selected_features
+    # Beste Features aus Stufe 2 verwenden, falls vorhanden
+    _best_features = selected_features
+    _feat_source = "manuell"
+    if _fs_key in st.session_state and not st.session_state[_fs_key].empty:
+        _fs_best_row = st.session_state[_fs_key]
+        _fs_best_row = _fs_best_row[_fs_best_row["best"]].iloc[0]
+        _raw_feats = _fs_best_row.get("feature_set", None)
+        if isinstance(_raw_feats, list):
+            _best_features = _raw_feats
+            _feat_source = "Stufe 2"
+        elif isinstance(_raw_feats, str) and _raw_feats.startswith("["):
+            import ast
 
+            try:
+                _best_features = ast.literal_eval(_raw_feats)
+                _feat_source = "Stufe 2"
+            except Exception:
+                pass
     st.info(
         f"Beste Parameter: SARIMAX{_best_order}x{_best_seasonal}  |  "
-        f"Features: {len(_best_features)}"
+        f"Features ({_feat_source}): {len(_best_features)}"
     )
     _run_sarimax_training(_best_order, _best_seasonal, _best_features)
 

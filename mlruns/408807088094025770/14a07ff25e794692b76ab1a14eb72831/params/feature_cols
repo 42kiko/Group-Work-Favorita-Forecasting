@@ -1,0 +1,1 @@
+['oil_price', 'transactions', 'transactions_ma7', 'pre_holiday', 'is_holiday_or_event', 'promo_streak', 'is_month_end', 'promo_rate_7d', 'store_cluster']

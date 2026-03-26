@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Kiko/Desktop/Code/tutoring/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/231ab264bb174f32a2b3c1e69f77ad13/artifacts
+end_time: 1774549762463
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: 231ab264bb174f32a2b3c1e69f77ad13
+run_name: daily_smooth_sarimax_fs_01_s1_oil_price_ma7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774549761969
+status: 3
+tags: []
+user_id: unknown

@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Kiko/Desktop/Code/tutoring/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/99726f958188486f9e9919ceffbeff95/artifacts
+end_time: 1774550309017
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: 99726f958188486f9e9919ceffbeff95
+run_name: daily_smooth_sarimax_fs_13_s13_post_holiday
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774550304152
+status: 3
+tags: []
+user_id: unknown

@@ -734,10 +734,13 @@ def run_sarimax_feature_search(
     progress_callback: Callable[[int, int, str], None] | None = None,
 ) -> pd.DataFrame:
     """
-    Stufe 2: Forward Stepwise Feature Selection bei fixen SARIMAX-Parametern.
+    Stufe 2: Forward Stepwise Feature Selection (vollstaendig) bei fixen SARIMAX-Parametern.
 
-    Startet ohne Features (Baseline), fuegt in jedem Schritt das Feature hinzu
-    das den MAE am meisten verbessert, und stoppt wenn kein Feature mehr hilft.
+    Alle N Schritte werden durchlaufen (kein vorzeitiger Stopp). In jedem Schritt wird
+    das Feature hinzugefuegt, das den MAE am staerksten senkt. Am Ende steht die beste
+    Kombination fest - egal ob 0, 9 oder alle 23 Features optimal sind.
+
+    Gesamtaufwand: N*(N+1)/2 Evaluierungen (ca. 276 fuer 23 Features).
 
     Parameters
     ----------
@@ -749,8 +752,9 @@ def run_sarimax_feature_search(
 
     Returns
     -------
-    DataFrame mit allen getesteten Schritten (step, added_feature, feature_set,
-    cv_mae_mean, cv_mae_std, n_features, run_id, best).
+    DataFrame mit Baseline + N Schritten (ein Eintrag pro Schritt), sortiert nach
+    step. Spalten: step, added_feature, feature_set, cv_mae_mean, cv_mae_std,
+    n_features, n_successful_folds, run_id, best.
     """
     step_size = step_size or horizon
     if candidate_features is None:
@@ -761,7 +765,6 @@ def run_sarimax_feature_search(
     _client = MlflowClient()
     _exp = mlflow.get_experiment_by_name(experiment_name)
 
-    # Zeitreihe einmalig vorbereiten
     ts = load_and_prepare(
         df, store, item, freq=freq, trailing_zero_min_days=trailing_zero_min_days
     )
@@ -774,15 +777,13 @@ def run_sarimax_feature_search(
     results: list[dict] = []
     step_counter = 0
 
-    # Gesamtanzahl Evaluierungen schaetzen: n + (n-1) + ... + 1 = n*(n+1)/2
     n_feats = len(remaining)
-    total_evals = n_feats * (n_feats + 1) // 2
+    total_evals = n_feats * (n_feats + 1) // 2 + 1  # Baseline + alle Schritte
     eval_counter = 0
 
     print(
-        f"\nSARIMAX Forward Feature Selection: {n_feats} Features, "
-        f"max {total_evals} Evaluierungen "
-        f"(order={order}, seasonal={seasonal_order})"
+        f"\nSARIMAX Forward Feature Selection (vollstaendig): {n_feats} Features, "
+        f"{total_evals} Evaluierungen (order={order}, seasonal={seasonal_order})"
     )
 
     def _eval_feature_set(
@@ -790,7 +791,6 @@ def run_sarimax_feature_search(
     ) -> tuple[float, float, int, str]:
         """Evaluiert ein Feature-Set, loggt in MLflow, gibt (mae, std, n_ok, run_id)."""
         X_aligned = _prepare_exog_aligned(df, ts, store, item, feat_list, freq)
-
         run_name = f"{fs_group}_{step_counter:02d}_{label}"
         _run_id = _client.create_run(
             experiment_id=_exp.experiment_id,
@@ -817,6 +817,7 @@ def run_sarimax_feature_search(
             cv_mae_mean = float(np.mean(valid_maes))
             cv_mae_std = float(np.std(valid_maes)) if n_ok > 1 else 0.0
 
+            feat_name = feat_list[-1] if feat_list else "(baseline)"
             params = {
                 "pattern": pattern,
                 "model_type": "sarimax",
@@ -836,6 +837,7 @@ def run_sarimax_feature_search(
                 "s": seasonal_order[3],
                 "n_exog_features": len(feat_list),
                 "feature_cols": str(feat_list),
+                "added_feature": feat_name,
                 "fs_step": step_counter,
             }
             for key, val in params.items():
@@ -872,13 +874,14 @@ def run_sarimax_feature_search(
                 "run_id": base_rid,
             }
         )
-    best_mae = base_mae
 
-    # ── Forward Selection Schritte ─────────────────────────────────────────
+    # ── Forward Selection: alle N Schritte ohne vorzeitigen Stopp ─────────
     while remaining:
         step_counter += 1
-        print(f"\n  [Step {step_counter}] Teste {len(remaining)} Features ...")
-        best_candidate = None
+        print(
+            f"\n  [Step {step_counter}/{n_feats}] Teste {len(remaining)} Features ..."
+        )
+        best_candidate = remaining[0]
         best_candidate_mae = float("inf")
         best_candidate_std = 0.0
         best_candidate_ok = 0
@@ -890,12 +893,9 @@ def run_sarimax_feature_search(
             print(f"    + {feat} ...", end=" ", flush=True)
             mae, std, n_ok, rid = _eval_feature_set(trial, f"s{step_counter}_{label}")
             eval_counter += 1
-
             if progress_callback is not None:
                 progress_callback(
-                    eval_counter,
-                    total_evals,
-                    f"Step {step_counter}: +{feat}",
+                    eval_counter, total_evals, f"Step {step_counter}: +{feat}"
                 )
 
             if n_ok > 0:
@@ -910,31 +910,24 @@ def run_sarimax_feature_search(
                 best_candidate_ok = n_ok
                 best_candidate_rid = rid
 
-        # Stopp wenn kein Feature den MAE verbessert
-        if best_candidate is None or best_candidate_mae >= best_mae:
-            print(
-                f"\n  Stopp: Kein Feature verbessert MAE " f"(aktuell {best_mae:.3f})"
-            )
-            break
-
-        # Bestes Feature aufnehmen
+        # Bestes Feature aufnehmen (auch wenn kein Fortschritt)
         selected.append(best_candidate)
         remaining.remove(best_candidate)
-        best_mae = best_candidate_mae
         print(f"  -> Aufgenommen: {best_candidate} " f"(MAE={best_candidate_mae:.3f})")
 
-        results.append(
-            {
-                "step": step_counter,
-                "added_feature": best_candidate,
-                "cv_mae_mean": best_candidate_mae,
-                "cv_mae_std": best_candidate_std,
-                "n_features": len(selected),
-                "feature_set": list(selected),
-                "n_successful_folds": best_candidate_ok,
-                "run_id": best_candidate_rid,
-            }
-        )
+        if best_candidate_ok > 0:
+            results.append(
+                {
+                    "step": step_counter,
+                    "added_feature": best_candidate,
+                    "cv_mae_mean": best_candidate_mae,
+                    "cv_mae_std": best_candidate_std,
+                    "n_features": len(selected),
+                    "feature_set": list(selected),
+                    "n_successful_folds": best_candidate_ok,
+                    "run_id": best_candidate_rid,
+                }
+            )
 
     if not results:
         return pd.DataFrame()
@@ -949,8 +942,8 @@ def run_sarimax_feature_search(
 
     best_feats = results_df.loc[best_idx, "feature_set"]
     print(
-        f"\nBestes Feature-Set ({len(best_feats)} Features): "
-        f"{best_feats or ['keine']}  "
+        f"\nBeste Kombination (Step {int(results_df.loc[best_idx, 'step'])}, "
+        f"{len(best_feats)} Features): {best_feats or ['keine']}  "
         f"MAE={results_df.loc[best_idx, 'cv_mae_mean']:.3f}"
     )
 

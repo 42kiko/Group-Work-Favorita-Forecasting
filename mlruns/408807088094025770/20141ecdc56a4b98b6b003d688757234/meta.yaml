@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/Kiko/Desktop/Code/tutoring/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/20141ecdc56a4b98b6b003d688757234/artifacts
+end_time: 1774550323711
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: 20141ecdc56a4b98b6b003d688757234
+run_name: daily_smooth_sarimax_fs_13_s13_oil_price_pct_change
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774550319060
+status: 3
+tags: []
+user_id: unknown
