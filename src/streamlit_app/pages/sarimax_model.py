@@ -301,9 +301,10 @@ if _fs_key not in st.session_state:
 
 with st.expander("Grid Search CV - SARIMAX", expanded=False):
     st.caption(
-        "Stufe 1 testet alle (p,d,q)(P,D,Q)-Kombinationen mit Walk-Forward-CV. "
-        "Stufe 2 fuehrt Forward Stepwise Feature Selection mit den besten "
-        "Parametern durch (einzelne Features, nicht Gruppen). "
+        "Stufe 1 testet alle (p,d,q)(P,D,Q)-Kombinationen mit Walk-Forward-CV "
+        "unter Einbeziehung aller verfuegbaren exogenen Features (SARIMAX-Kontext). "
+        "Stufe 2 fuehrt Backward Elimination durch: startet mit allen Features und "
+        "entfernt schrittweise jene, deren Wegfall den MAE verbessert. "
         "Beide Stufen sind unabhaengig voneinander startbar."
     )
 
@@ -382,6 +383,14 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
             f"{gs_n_combos * gs_n_windows} Fits - das kann lange dauern."
         )
 
+    # Alle verfuegbaren Features fuer Stufe 1 (SARIMAX-Kontext, nicht reines SARIMA)
+    _all_gs_features = [
+        feat
+        for group_cols in FEATURE_GROUPS.values()
+        for feat in group_cols
+        if not (is_weekly and feat == "is_weekend")
+    ]
+
     # ── Zwei separate Buttons ──────────────────────────────────────────────
     _gs_btn_col, _fs_btn_col, _ = st.columns([1, 1, 2])
 
@@ -439,7 +448,7 @@ with st.expander("Grid Search CV - SARIMAX", expanded=False):
                 horizon=int(gs_horizon),
                 n_windows=int(gs_n_windows),
                 param_grid=_gs_param_grid,
-                feature_cols=[],
+                feature_cols=_all_gs_features,
                 trailing_zero_min_days=trailing_zero_min_days,
                 progress_callback=_gs_callback,
             )

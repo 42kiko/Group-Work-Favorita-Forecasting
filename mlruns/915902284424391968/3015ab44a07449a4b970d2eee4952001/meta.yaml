@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/915902284424391968/3015ab44a07449a4b970d2eee4952001/artifacts
+end_time: 1774626763776
+entry_point_name: ''
+experiment_id: '915902284424391968'
+lifecycle_stage: active
+run_id: 3015ab44a07449a4b970d2eee4952001
+run_name: daily_smooth_003_prophet
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774626763740
+status: 3
+tags: []
+user_id: patrickhederer

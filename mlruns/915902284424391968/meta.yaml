@@ -1,0 +1,7 @@
+artifact_location: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/915902284424391968
+creation_time: 1774625648852
+experiment_id: '915902284424391968'
+last_update_time: 1774625648852
+lifecycle_stage: active
+name: favorita_prophet_store_item
+workspace: default

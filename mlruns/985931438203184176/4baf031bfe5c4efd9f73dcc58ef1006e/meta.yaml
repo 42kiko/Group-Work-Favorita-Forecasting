@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/985931438203184176/4baf031bfe5c4efd9f73dcc58ef1006e/artifacts
+end_time: 1774627106823
+entry_point_name: ''
+experiment_id: '985931438203184176'
+lifecycle_stage: active
+run_id: 4baf031bfe5c4efd9f73dcc58ef1006e
+run_name: daily_smooth_003_gradient_boost
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774627106790
+status: 3
+tags: []
+user_id: patrickhederer

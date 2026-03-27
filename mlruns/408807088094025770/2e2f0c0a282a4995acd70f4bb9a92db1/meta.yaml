@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/2e2f0c0a282a4995acd70f4bb9a92db1/artifacts
+end_time: 1774623871342
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: 2e2f0c0a282a4995acd70f4bb9a92db1
+run_name: daily_smooth_sarimax_fs_03_s3_is_payday
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774623850401
+status: 3
+tags: []
+user_id: unknown

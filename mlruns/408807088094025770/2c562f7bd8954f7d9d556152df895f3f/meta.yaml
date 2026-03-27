@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/patrickhederer/Python%20Projects/Group-Work-Favorita-Forecasting/mlruns/408807088094025770/2c562f7bd8954f7d9d556152df895f3f/artifacts
+end_time: 1774622735965
+entry_point_name: ''
+experiment_id: '408807088094025770'
+lifecycle_stage: active
+run_id: 2c562f7bd8954f7d9d556152df895f3f
+run_name: daily_smooth_sarimax_fs_01_s1_oil_price_ma7
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1774622712881
+status: 3
+tags: []
+user_id: unknown
